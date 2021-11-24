@@ -12,6 +12,8 @@ fp-ts, [newtype-ts](https://gcanti.github.io/newtype-ts/), and [monocle-ts](http
 
 Some of the more commonly needed functions from [fp-ts-contrib](https://gcanti.github.io/fp-ts-contrib/docs/modules) are duplicated here.
 
+fp-ts-std is published with both ESM and CJS modules, however until TypeScript support for conditional exports improves tree-shakeable ESM modules must be imported from the `esm/` subdirectory.
+
 ## Objectives
 
 fp-ts-std aims to achieve the following objectives:
@@ -43,10 +45,10 @@ All modules and exports must be annotated with JSDoc. This information is used t
 
 Only the owner of this repository can publish, but this is still useful to document each for my memory, for any contributors, and for anyone who seeks to use this repo as a template for their own library.
 
-Files are built into `dist/`, however we'd prefer if consumers didn't have to import from `<package>/dist/<module>`, so we copy the npm manifest into the aforementioned subdirectory and publish against that. The npm manifest at the root of this repo has `"private": true` set to prevent accidentally publishing with the prefix.
+CJS modules are built into `dist/`, however we'd prefer if consumers didn't have to import from `<package>/dist/<module>`, so we copy the npm manifest into the aforementioned subdirectory and publish against that. ESM modules are published into a `esm/` subdirectory pending a rewrite to use conditional exports. The npm manifest at the root of this repo has `"private": true` set to prevent accidentally publishing with the prefix.
 
 The process for publishing is thus as follows:
 
 1. Increment the version in the npm manifest.
-2. Run `$ yarn prepub`, which handles the npm manifest fiddling described above.
+2. Run `$ yarn build`, which handles the npm manifest fiddling described above.
 3. Run `$ yarn publish dist/`, and repeat the version in the npm manifest when prompted.
