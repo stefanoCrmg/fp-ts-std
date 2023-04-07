@@ -258,10 +258,14 @@ export const setTextContent =
  * el.click()
  * assert.strictEqual(clicks, 0)
  *
- * listen()
+ * const cleanUpClickHandler = listen()
  * el.click()
  * assert.strictEqual(clicks, 1)
  *
+ * el.click()
+ * assert.strictEqual(clicks, 2)
+ *
+ * cleanUpClickHandler()
  * el.click()
  * assert.strictEqual(clicks, 2)
  *
