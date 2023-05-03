@@ -409,18 +409,29 @@ describe("DOM", () => {
   })
 
   describe("setInterval", () => {
+    // eslint-disable-next-line functional/no-expression-statements
+    beforeEach(() => {
+      // eslint-disable-next-line functional/no-expression-statements
+      jest.useFakeTimers()
+    })
+
+    // eslint-disable-next-line functional/no-expression-statements
+    afterEach(() => {
+      // eslint-disable-next-line functional/no-expression-statements
+      jest.useRealTimers()
+    })
+
     it("executes a function after some time has elapsed", () => {
       const someFunction: IO.IO<void> = IO.of(constVoid)
       const mockSomeFunction = jest.fn(someFunction)
       const someMilliseconds = mkMilliseconds(100)
       const { window: mockWindow } = new JSDOM()
 
-      // eslint-disable-next-line functional/no-expression-statements
-      jest.useFakeTimers()
       const setSomeInterval = setInterval(
         mockSomeFunction,
         someMilliseconds,
       )(mockWindow as unknown as Window)
+
       expect(mockSomeFunction).toBeCalledTimes(0)
       // eslint-disable-next-line functional/no-expression-statements
       pipe(setSomeInterval, IOexecute)
@@ -429,16 +440,28 @@ describe("DOM", () => {
       jest.advanceTimersByTime(unMilliseconds(someMilliseconds))
       expect(mockSomeFunction).toBeCalledTimes(1)
     })
+  })
 
-    it("does NOT execute a function after some time has elapsed if clearInterval has been called", () => {
+  describe("clearInterval", () => {
+    // eslint-disable-next-line functional/no-expression-statements
+    beforeEach(() => {
+      // eslint-disable-next-line functional/no-expression-statements
+      jest.useFakeTimers()
+    })
+
+    // eslint-disable-next-line functional/no-expression-statements
+    afterEach(() => {
+      // eslint-disable-next-line functional/no-expression-statements
+      jest.useRealTimers()
+    })
+
+    it("stops the execution of a setInterval", () => {
       const someFunction: IO.IO<void> = IO.of(constVoid)
       const mockSomeFunction = jest.fn(someFunction)
       const someMilliseconds = mkMilliseconds(100)
 
       const { window: mockWindow } = new JSDOM()
 
-      // eslint-disable-next-line functional/no-expression-statements
-      jest.useFakeTimers()
       expect(mockSomeFunction).toBeCalledTimes(0)
 
       const setSomeInterval = setInterval(

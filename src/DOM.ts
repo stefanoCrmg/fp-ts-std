@@ -14,6 +14,7 @@ import * as O from "fp-ts/Option"
 import { IOOption } from "fp-ts/IOOption"
 import { NonEmptyArray } from "fp-ts/NonEmptyArray"
 import * as NEA from "fp-ts/NonEmptyArray"
+import { Task } from "fp-ts/Task"
 import { constVoid, flow, pipe } from "fp-ts/function"
 import { invoke } from "./Function"
 import { pack, unpack } from "./Newtype"
@@ -24,6 +25,7 @@ type IntervalIdSymbol = { readonly IntervalId: unique symbol }
 /**
  * Newtype representing an IntervalId returned by the setInterval function.
  *
+ * @since 0.12.0
  */
 export type IntervalId = Newtype<IntervalIdSymbol, number>
 
@@ -326,8 +328,30 @@ export const addEventListener_ =
   (el: Node | Window): IO<void> =>
     pipe(addEventListener(type)(listener)(el), IO.map(constVoid))
 
+/**
+ * Executes a function after some time has elapsed.
+ *
+ * @example
+ * import { JSDOM } from 'jsdom'
+ * import { setInterval } from 'fp-ts-std/DOM'
+ * import { mkMilliseconds, unMilliseconds } from 'fp-ts-std/Date'
+ * import * as T from 'fp-ts/Task'
+ * const { window } = new JSDOM()
+ *
+ * const millis = mkMilliseconds(1)
+ * let clicks = 0
+ * const addClicks = () => () => clicks++
+ * const clickAfterSomeTime = setInterval(addClicks, millis)(window as unknown as Window)
+ *
+ * assert.strictEqual(clicks, 0)
+ * clickAfterSomeTime()
+ * T.delay(1)(T.of(undefined))().then(() => assert.strictEqual(clicks, 1))
+ *
+ *
+ * @since 0.17.0
+ */
 export const setInterval =
-  (handler: IO<void>, timeout: Milliseconds) =>
+  (handler: IO<void> | Task<void>, timeout: Milliseconds) =>
   (window: Window): IO<IntervalId> =>
   () =>
     pipe(
@@ -336,6 +360,30 @@ export const setInterval =
       pack<IntervalId>,
     )
 
+/**
+ * Clears the execution of a setInterval.
+ *
+ * @example
+ * import { JSDOM } from 'jsdom'
+ * import { setInterval, clearInterval } from 'fp-ts-std/DOM'
+ * import { mkMilliseconds, unMilliseconds } from 'fp-ts-std/Date'
+ * import * as T from 'fp-ts/Task'
+ * const { window } = new JSDOM()
+ *
+ * const millis = mkMilliseconds(5)
+ * let clicks = 0
+ * const addClicks = () => () => clicks++
+ * const clickAfterSomeTime = setInterval(addClicks, millis)(window as unknown as Window)
+ *
+ * assert.strictEqual(clicks, 0)
+ * const intervalId = clickAfterSomeTime()
+ * clearInterval(intervalId)(window as unknown as Window)()
+ *
+ * T.delay(5)(T.of(undefined))().then(() => assert.strictEqual(clicks, 0))
+ *
+ *
+ * @since 0.17.0
+ */
 export const clearInterval =
   (id: IntervalId) =>
   (window: Window): IO<void> =>
