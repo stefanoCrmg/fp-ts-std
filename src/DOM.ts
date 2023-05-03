@@ -7,6 +7,7 @@
  * @since 0.12.0
  */
 
+import { Newtype } from "newtype-ts"
 import * as IO from "fp-ts/IO"
 type IO<A> = IO.IO<A>
 import * as O from "fp-ts/Option"
@@ -15,6 +16,17 @@ import { NonEmptyArray } from "fp-ts/NonEmptyArray"
 import * as NEA from "fp-ts/NonEmptyArray"
 import { constVoid, flow, pipe } from "fp-ts/function"
 import { invoke } from "./Function"
+import { pack, unpack } from "./Newtype"
+import { Milliseconds } from "./Date"
+
+type IntervalIdSymbol = { readonly IntervalId: unique symbol }
+
+/**
+ * Newtype representing an IntervalId returned by the setInterval function.
+ *
+ */
+export type IntervalId = Newtype<IntervalIdSymbol, number>
+
 /**
  * Convert a `NodeList` into an `Array`.
  *
@@ -313,3 +325,19 @@ export const addEventListener_ =
   (listener: EventListener) =>
   (el: Node | Window): IO<void> =>
     pipe(addEventListener(type)(listener)(el), IO.map(constVoid))
+
+export const setInterval =
+  (handler: IO<void>, timeout: Milliseconds) =>
+  (window: Window): IO<IntervalId> =>
+  () =>
+    pipe(
+      window,
+      invoke("setInterval")([handler, unpack<Milliseconds>(timeout)]),
+      pack<IntervalId>,
+    )
+
+export const clearInterval =
+  (id: IntervalId) =>
+  (window: Window): IO<void> =>
+  () =>
+    pipe(window, invoke("clearInterval")([unpack<IntervalId>(id)]))
