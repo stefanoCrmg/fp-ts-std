@@ -1,6 +1,6 @@
 ---
 title: Env.ts
-nav_order: 10
+nav_order: 11
 parent: Modules
 ---
 
@@ -15,13 +15,13 @@ Added in v0.9.0
 
 <h2 class="text-delta">Table of contents</h2>
 
-- [utils](#utils)
+- [3 Functions](#3-functions)
   - [getParam](#getparam)
   - [getParamNonEmpty](#getparamnonempty)
 
 ---
 
-# utils
+# 3 Functions
 
 ## getParam
 
@@ -30,11 +30,11 @@ Attempt to get an environment parameter.
 **Signature**
 
 ```ts
-export declare const getParam: (k: string) => IO<Option<string>>
+export declare const getParam: (k: string) => IOOption<string>
 ```
 
 ```hs
-getParam :: string -> IO (Option string)
+getParam :: string -> IOOption string
 ```
 
 **Example**
@@ -57,11 +57,11 @@ Attempt to get an environment parameter, filtering out empty strings.
 **Signature**
 
 ```ts
-export declare const getParamNonEmpty: (k: string) => IO<Option<string>>
+export declare const getParamNonEmpty: (k: string) => IOOption<NonEmptyString>
 ```
 
 ```hs
-getParamNonEmpty :: string -> IO (Option string)
+getParamNonEmpty :: string -> IOOption NonEmptyString
 ```
 
 **Example**

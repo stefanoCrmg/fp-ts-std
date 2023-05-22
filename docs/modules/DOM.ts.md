@@ -17,8 +17,9 @@ Added in v0.12.0
 
 <h2 class="text-delta">Table of contents</h2>
 
-- [utils](#utils)
+- [3 Functions](#3-functions)
   - [addEventListener](#addeventlistener)
+  - [addEventListener\_](#addeventlistener_)
   - [appendChild](#appendchild)
   - [childNodes](#childnodes)
   - [emptyChildren](#emptychildren)
@@ -31,20 +32,23 @@ Added in v0.12.0
 
 ---
 
-# utils
+# 3 Functions
 
 ## addEventListener
 
 Adds an event listener to a node.
+Returns a cleanup function for removing the event listener.
 
 **Signature**
 
 ```ts
-export declare const addEventListener: (type: string) => (f: (evt: Event) => IO<void>) => (x: Node) => IO<void>
+export declare const addEventListener: (
+  type: EventTarget
+) => (listener: EventListener) => (el: Node | Window) => IO<EventListenerCleanup>
 ```
 
 ```hs
-addEventListener :: string -> (Event -> IO void) -> Node -> IO void
+addEventListener :: EventTarget -> EventListener -> Node | Window -> IO EventListenerCleanup
 ```
 
 **Example**
@@ -65,15 +69,60 @@ assert.strictEqual(clicks, 0)
 el.click()
 assert.strictEqual(clicks, 0)
 
-listen()
+const cleanupClickHandler = listen()
 el.click()
 assert.strictEqual(clicks, 1)
 
 el.click()
 assert.strictEqual(clicks, 2)
+
+cleanupClickHandler()
+el.click()
+assert.strictEqual(clicks, 2)
 ```
 
 Added in v0.12.0
+
+## addEventListener\_
+
+Adds an event listener to a node.
+
+**Signature**
+
+```ts
+export declare const addEventListener_: (
+  type: EventTarget
+) => (listener: EventListener) => (el: Node | Window) => IO<void>
+```
+
+```hs
+addEventListener_ :: EventTarget -> EventListener -> Node | Window -> IO void
+```
+
+**Example**
+
+```ts
+import { JSDOM } from 'jsdom'
+import { addEventListener_ } from 'fp-ts-std/DOM'
+
+const {
+  window: { document },
+} = new JSDOM()
+const el = document.createElement('div')
+let clicks = 0
+const listen = addEventListener_('click')(() => () => clicks++)(el)
+
+assert.strictEqual(clicks, 0)
+
+el.click()
+assert.strictEqual(clicks, 0)
+
+listen()
+el.click()
+assert.strictEqual(clicks, 1)
+```
+
+Added in v0.17.0
 
 ## appendChild
 
@@ -120,11 +169,11 @@ Returns all child nodes, if any, of a node.
 **Signature**
 
 ```ts
-export declare const childNodes: (x: Node) => IO<Option<NonEmptyArray<ChildNode>>>
+export declare const childNodes: (x: Node) => IOOption<NonEmptyArray<ChildNode>>
 ```
 
 ```hs
-childNodes :: Node -> IO (Option (NonEmptyArray ChildNode))
+childNodes :: Node -> IOOption (NonEmptyArray ChildNode)
 ```
 
 **Example**
@@ -224,11 +273,11 @@ Gets the text content, if any, of a node.
 **Signature**
 
 ```ts
-export declare const getTextContent: (x: Node) => IO<Option<string>>
+export declare const getTextContent: (x: Node) => IOOption<string>
 ```
 
 ```hs
-getTextContent :: Node -> IO (Option string)
+getTextContent :: Node -> IOOption string
 ```
 
 **Example**
@@ -259,11 +308,11 @@ selector.
 **Signature**
 
 ```ts
-export declare const querySelector: (q: string) => (x: ParentNode) => IO<Option<Element>>
+export declare const querySelector: (q: string) => (x: ParentNode) => IOOption<Element>
 ```
 
 ```hs
-querySelector :: string -> ParentNode -> IO (Option Element)
+querySelector :: string -> ParentNode -> IOOption Element
 ```
 
 **Example**
@@ -295,11 +344,11 @@ selector.
 **Signature**
 
 ```ts
-export declare const querySelectorAll: (q: string) => (x: ParentNode) => IO<Option<NonEmptyArray<Element>>>
+export declare const querySelectorAll: (q: string) => (x: ParentNode) => IOOption<NonEmptyArray<Element>>
 ```
 
 ```hs
-querySelectorAll :: string -> ParentNode -> IO (Option (NonEmptyArray Element))
+querySelectorAll :: string -> ParentNode -> IOOption (NonEmptyArray Element)
 ```
 
 **Example**

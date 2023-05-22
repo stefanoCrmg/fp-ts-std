@@ -7,17 +7,28 @@
   outputs = { self, nixpkgs, flake-utils }:
     flake-utils.lib.eachDefaultSystem
       (system:
-        let pkgs = nixpkgs.legacyPackages.${system};
+        let
+          overlay = _final: super: {
+            tshm-docs-ts = super.callPackage ./tshm-docs-ts.nix { };
+          };
+
+          pkgs = import nixpkgs {
+            inherit system;
+            overlays = [ overlay ];
+          };
+
+          common = with pkgs; [ git yarn tshm-docs-ts ];
         in
         {
-          devShells.default =
-            pkgs.mkShell {
-              nativeBuildInputs = with pkgs; [
-                git
-                nodejs-19_x
-                yarn
-              ];
+          devShells = {
+            default = pkgs.mkShell {
+              nativeBuildInputs = with pkgs; [ nodejs_20 ] ++ common;
             };
+
+            lts = pkgs.mkShell {
+              nativeBuildInputs = with pkgs; [ nodejs ] ++ common;
+            };
+          };
         }
       );
 }

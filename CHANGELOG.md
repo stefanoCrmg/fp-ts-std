@@ -2,6 +2,27 @@
 
 This project adheres to semantic versioning.
 
+## 0.17.0 (_Unreleased_)
+
+- Add `URLPath` module.
+- Add `Enum` module.
+- Add `Bounded` instance to `Boolean`.
+- Add `match2`, `getBounded`, and `getOrd` to `Either`.
+- Add `applyN` to `Function`.
+- Add `digits` and alternative "Safe" `Bounded` instance to `Number`.
+- Add `match2` and `getBounded` to `Option`.
+- Add `getEq`, `getOrd`, and `getBounded` to `Tuple`.
+- Add `clone` to `URL`.
+- Add `toRecord`, `toString`, and `toTuples` to `URLSearchParams`.
+- Return a cleanup function in `addEventListener`, and add `addEventListener_`. Narrow the event type/target of each.
+- Remove index module. It's unfriendly to tree-shaking and less flexible than the [facades pattern](https://samhh.github.io/fp-ts-std/facades.html).
+- Improve safety and inference of `isInstanceOf`.
+- Adjust the input type of `fromRecord` in `URLSearchParams`.
+- Narrow return type of `getParamNonEmpty` in `Env` to `NonEmptyString`.
+- Add `flatMap` aliases.
+- Support TypeScript's `node16`/`nodenext` module resolutions.
+- Bump minimum supported fp-ts version to 2.14.0.
+
 ## 0.16.0 (2023-04-10)
 
 - Add `IOOption` module.
@@ -115,7 +136,7 @@ This project adheres to semantic versioning.
 - Add `when`, `unless`, and `execute` to `Task`.
 - Add `isFinite` and `toFinite` to `Number`.
 - Add `noneAs`, `invert`, and `toMonoid` to `Option`.
-- Add `extractAt` to `Array` and `ReadonlyArray`..
+- Add `extractAt` to `Array` and `ReadonlyArray`.
 - Duplicate `filterA` from fp-ts-contrib into `Array` and `ReadonlyArray`.
 - Replace `pick` in `Record` and `ReadonlyRecord` with a non-thunked version. The old implementation is now called `pickFrom`.
 - Narrow the type of the first parameter in `replaceAll`. This reverts the change made in 0.10.1.
@@ -124,7 +145,7 @@ This project adheres to semantic versioning.
 ## 0.11.0 (2021-08-09)
 
 - Add `isAlpha`, `isAlphaNum`, `isLower`, `isUpper`, and `splitAt` to `String`.
-- Add `zipAll` to `Array` and `ReadonlyArray`..
+- Add `zipAll` to `Array` and `ReadonlyArray`.
 - Add `fork` to `Function`.
 - A few function signatures now use readonly arrays as opposed to regular arrays as a result of the following supercessions.
 - Remove `contains`, `endsWith`, `isString`, `replace`, `slice`, `split`, `startsWith`, `toLower`, `toUpper`, `trim`, `trimLeft`, and `trimRight` from `String` as they've been superceded by new additions to [fp-ts/string](https://gcanti.github.io/fp-ts/modules/string.ts.html).

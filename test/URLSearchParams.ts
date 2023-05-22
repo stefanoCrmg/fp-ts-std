@@ -1,8 +1,11 @@
 import {
   empty,
   fromString,
+  toString,
   fromRecord,
+  toRecord,
   fromTuples,
+  toTuples,
   clone,
   isURLSearchParams,
   isEmpty,
@@ -37,10 +40,21 @@ describe("URLSearchParams", () => {
     it("never throws", () => {
       fc.assert(
         fc.property(fc.string(), x => {
-          // eslint-disable-next-line functional/no-expression-statement
+          // eslint-disable-next-line functional/no-expression-statements
           f(x)
         }),
       )
+    })
+  })
+
+  describe("toString", () => {
+    const f = toString
+
+    it("returns query string without a question mark", () => {
+      const s = "a=b&c=d&a=e"
+      const u = new URLSearchParams(s)
+
+      expect(f(u)).toBe(s)
     })
   })
 
@@ -48,27 +62,45 @@ describe("URLSearchParams", () => {
     const f = fromRecord
 
     it("parses roughly as expected", () => {
-      expect(f({ a: "b" }).get("a")).toEqual("b")
-      expect(f({ "a,b": "c" }).get("a,b")).toEqual("c")
-      expect(f({ x: "y", a: "b" }).get("a")).toEqual("b")
+      expect(f({ a: ["b"] }).get("a")).toBe("b")
+      expect(f({ "a,b": ["c"] }).get("a,b")).toBe("c")
+      expect(f({ x: ["y"], a: ["b"] }).get("a")).toBe("b")
+
+      const x = f({ x: [], y: ["y1"], z: ["z1", "z2"] })
+      expect(x.getAll("x")).toEqual([])
+      expect(x.getAll("y")).toEqual(["y1"])
+      expect(x.getAll("z")).toEqual(["z1", "z2"])
     })
 
     it("migrates every key", () => {
       fc.assert(
-        fc.property(fc.dictionary(fc.string(), fc.string()), x => {
-          const y = f(x)
-          return keys(x).every(z => y.has(z))
-        }),
+        fc.property(
+          fc.dictionary(fc.string(), fc.array(fc.string(), { minLength: 1 })),
+          x => {
+            const y = f(x)
+            return keys(x).every(z => y.has(z))
+          },
+        ),
       )
     })
 
     it("never throws", () => {
       fc.assert(
-        fc.property(fc.dictionary(fc.string(), fc.string()), x => {
-          // eslint-disable-next-line functional/no-expression-statement
+        fc.property(fc.dictionary(fc.string(), fc.array(fc.string())), x => {
+          // eslint-disable-next-line functional/no-expression-statements
           f(x)
         }),
       )
+    })
+  })
+
+  describe("toRecord", () => {
+    const f = toRecord
+
+    it("returns all values grouped by key", () => {
+      const x = new URLSearchParams("a=b&c=d&a=e")
+
+      expect(f(x)).toEqual({ a: ["b", "e"], c: ["d"] })
     })
   })
 
@@ -98,10 +130,25 @@ describe("URLSearchParams", () => {
     it("never throws", () => {
       fc.assert(
         fc.property(fc.array(fc.tuple(fc.string(), fc.string())), x => {
-          // eslint-disable-next-line functional/no-expression-statement
+          // eslint-disable-next-line functional/no-expression-statements
           f(x)
         }),
       )
+    })
+  })
+
+  describe("toTuples", () => {
+    const f = toTuples
+
+    it("returns all key/value pairs", () => {
+      const xs: Array<[string, string]> = [
+        ["a", "b"],
+        ["c", "d"],
+        ["a", "e"],
+      ]
+      const y = new URLSearchParams(xs)
+
+      expect(f(y)).toEqual(xs)
     })
   })
 
@@ -111,7 +158,7 @@ describe("URLSearchParams", () => {
     it("does not mutate input", () => {
       const x = new URLSearchParams()
       const y = f(x)
-      y.set("a", "b") // eslint-disable-line functional/no-expression-statement
+      y.set("a", "b") // eslint-disable-line functional/no-expression-statements
 
       expect(y.has("a")).toBe(true)
       expect(x.has("a")).toBe(false)
@@ -124,7 +171,7 @@ describe("URLSearchParams", () => {
     it("works", () => {
       expect(f(new URL("https://samhh.com"))).toBe(false)
       expect(f(empty)).toBe(true)
-      expect(f(fromRecord({ a: "b" }))).toBe(true)
+      expect(f(fromRecord({ a: ["b"] }))).toBe(true)
     })
   })
 

@@ -11,6 +11,26 @@ import * as E from "fp-ts/Either"
 import { flow, identity, pipe } from "fp-ts/function"
 import { Refinement } from "fp-ts/Refinement"
 import { construct, isInstanceOf } from "./Function"
+import { Endomorphism } from "fp-ts/Endomorphism"
+
+/**
+ * Clone a `URL` object.
+ *
+ * @example
+ * import { clone } from 'fp-ts-std/URL'
+ *
+ * const x = new URL('https://samhh.com/foo')
+ * const y = clone(x)
+ *
+ * x.pathname = '/bar'
+ *
+ * assert.strictEqual(x.pathname, '/bar')
+ * assert.strictEqual(y.pathname, '/foo')
+ *
+ * @category 3 Functions
+ * @since 0.17.0
+ */
+export const clone: Endomorphism<URL> = u => unsafeParse(u.href)
 
 /**
  * Unsafely parse a `URL`, throwing on failure.
@@ -20,6 +40,7 @@ import { construct, isInstanceOf } from "./Function"
  *
  * assert.deepStrictEqual(unsafeParse('https://samhh.com'), new URL('https://samhh.com'))
  *
+ * @category 3 Functions
  * @since 0.1.0
  */
 export const unsafeParse = (x: string): URL => pipe([x], construct(URL))
@@ -37,18 +58,17 @@ export const unsafeParse = (x: string): URL => pipe([x], construct(URL))
  * assert.deepStrictEqual(f('https://samhh.com'), E.right(new URL('https://samhh.com')))
  * assert.deepStrictEqual(f('invalid'), E.left('e'))
  *
+ * @category 3 Functions
  * @since 0.1.0
  */
 export const parse =
   <E>(f: (e: TypeError) => E) =>
   (x: string): Either<E, URL> =>
-    pipe(
-      // It should only throw some sort of `TypeError`:
-      // https://developer.mozilla.org/en-US/docs/Web/API/URL/URL
-      E.tryCatch(
-        () => unsafeParse(x),
-        e => f(e as TypeError),
-      ),
+    // It should only throw some sort of `TypeError`:
+    // https://developer.mozilla.org/en-US/docs/Web/API/URL/URL
+    E.tryCatch(
+      () => unsafeParse(x),
+      e => f(e as TypeError),
     )
 
 /**
@@ -61,6 +81,7 @@ export const parse =
  * assert.deepStrictEqual(parseO('https://samhh.com'), O.some(new URL('https://samhh.com')))
  * assert.deepStrictEqual(parseO('invalid'), O.none)
  *
+ * @category 3 Functions
  * @since 0.1.0
  */
 export const parseO: (href: string) => Option<URL> = flow(
@@ -77,6 +98,7 @@ export const parseO: (href: string) => Option<URL> = flow(
  * assert.strictEqual(isURL(new URL('https://samhh.com')), true)
  * assert.strictEqual(isURL({ not: { a: 'url' } }), false)
  *
+ * @category 3 Functions
  * @since 0.1.0
  */
 export const isURL: Refinement<unknown, URL> = isInstanceOf(URL)

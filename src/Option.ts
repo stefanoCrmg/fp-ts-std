@@ -8,12 +8,16 @@ import { Option } from "fp-ts/Option"
 import * as O from "fp-ts/Option"
 import { Eq } from "fp-ts/Eq"
 import { Endomorphism } from "fp-ts/Endomorphism"
-import { constant, flow } from "fp-ts/function"
+import { constant, flow, pipe } from "fp-ts/function"
 import * as B from "fp-ts/boolean"
 import { invert as invertBool } from "./Boolean"
 import { altAllBy as _altAllBy, pureIf as _pureIf } from "./Alternative"
 import { toMonoid as _toMonoid } from "./Monoid"
-import { Lazy } from "./Lazy"
+import * as L from "./Lazy"
+import Lazy = L.Lazy
+import { Bounded } from "fp-ts/Bounded"
+import { Enum } from "./Enum"
+import { increment, decrement } from "./Number"
 
 /**
  * Unwrap the value from within an `Option`, throwing `msg` if `None`.
@@ -27,12 +31,13 @@ import { Lazy } from "./Lazy"
  *   /^foo$/,
  * )
  *
+ * @category 3 Functions
  * @since 0.16.0
  */
 export const unsafeExpect =
   (msg: string) =>
   <A>(x: Option<A>): A => {
-    // eslint-disable-next-line functional/no-conditional-statement, functional/no-throw-statement
+    // eslint-disable-next-line functional/no-conditional-statements, functional/no-throw-statements
     if (O.isNone(x)) throw msg
 
     return x.value
@@ -47,6 +52,7 @@ export const unsafeExpect =
  *
  * assert.deepStrictEqual(unsafeUnwrap(O.some(5)), 5)
  *
+ * @category 3 Functions
  * @since 0.1.0
  */
 export const unsafeUnwrap: <A>(x: Option<A>) => A = unsafeExpect(
@@ -65,6 +71,7 @@ export const unsafeUnwrap: <A>(x: Option<A>) => A = unsafeExpect(
  *
  * assert.deepStrictEqual(noneAs<any>(), O.none)
  *
+ * @category 3 Functions
  * @since 0.12.0
  */
 export const noneAs = <A>(): Option<A> => O.none
@@ -88,6 +95,7 @@ export const noneAs = <A>(): Option<A> => O.none
  * assert.deepStrictEqual(f(O.some('y')), O.some('x'))
  * assert.deepStrictEqual(f(O.some('x')), O.none)
  *
+ * @category 3 Functions
  * @since 0.12.0
  */
 export const invert =
@@ -111,6 +119,7 @@ export const invert =
  * assert.deepStrictEqual(f(O.some('x')), 'x')
  * assert.deepStrictEqual(f(O.none), '')
  *
+ * @category 2 Typeclass Methods
  * @since 0.12.0
  */
 export const toMonoid = _toMonoid(O.Foldable)
@@ -131,6 +140,7 @@ export const toMonoid = _toMonoid(O.Foldable)
  * assert.deepStrictEqual(memptyWhen(false)(constant(O.some('x'))), O.some('x'))
  * assert.deepStrictEqual(memptyWhen(false)(constant(O.none)), O.none)
  *
+ * @category 2 Typeclass Methods
  * @since 0.13.0
  */
 export const memptyWhen =
@@ -152,6 +162,7 @@ export const memptyWhen =
  * assert.deepStrictEqual(memptyUnless(false)(constant(O.some('x'))), O.none)
  * assert.deepStrictEqual(memptyUnless(false)(constant(O.none)), O.none)
  *
+ * @category 2 Typeclass Methods
  * @since 0.13.0
  */
 export const memptyUnless: (
@@ -172,6 +183,7 @@ export const memptyUnless: (
  *
  * const mname = pureIf(isMagicNumber(person.age))(constant(person.name))
  *
+ * @category 2 Typeclass Methods
  * @since 0.13.0
  */
 export const pureIf: (x: boolean) => <A>(y: Lazy<A>) => Option<A> = _pureIf(
@@ -193,8 +205,102 @@ export const pureIf: (x: boolean) => <A>(y: Lazy<A>) => Option<A> = _pureIf(
  *   O.some('foo'),
  * )
  *
+ * @category 2 Typeclass Methods
  * @since 0.15.0
  */
 export const altAllBy: <A, B>(
   fs: Array<(x: A) => Option<B>>,
 ) => (x: A) => Option<B> = _altAllBy(O.Alternative)
+
+/**
+ * Derive a `Bounded` instance for `Option<A>` in which the top and bottom
+ * bounds are `Some(B.top)` and `None` respectively.
+ *
+ * @category 1 Typeclass Instances
+ * @since 0.17.0
+ */
+export const getBounded = <A>(B: Bounded<A>): Bounded<Option<A>> => ({
+  ...O.getOrd(B),
+  top: O.some(B.top),
+  bottom: O.none,
+})
+
+/**
+ * Derive an `Enum` instance for `Option<A>` given an `Enum` instance for `A`.
+ *
+ * @example
+ * import { universe } from 'fp-ts-std/Enum'
+ * import { Enum as EnumBool } from 'fp-ts-std/Boolean'
+ * import * as O from 'fp-ts/Option'
+ * import { getEnum as getEnumO } from 'fp-ts-std/Option'
+ *
+ * const EnumBoolO = getEnumO(EnumBool)
+ *
+ * assert.deepStrictEqual(
+ *   universe(EnumBoolO),
+ *   [O.none, O.some(false), O.some(true)],
+ * )
+ *
+ * @category 1 Typeclass Instances
+ * @since 0.17.0
+ */
+export const getEnum = <A>(E: Enum<A>): Enum<Option<A>> => ({
+  ...getBounded(E),
+  succ: O.match(
+    L.lazy(() => O.some(O.some(E.bottom))),
+    flow(E.succ, O.map(O.some)),
+  ),
+  pred: O.map(E.pred),
+  toEnum: n =>
+    n === 0 ? O.some(O.none) : pipe(n, decrement, E.toEnum, O.map(O.some)),
+  fromEnum: O.match(constant(0), flow(E.fromEnum, increment)),
+  cardinality: pipe(E.cardinality, L.map(increment)),
+})
+
+/**
+ * Pattern match against two `Option`s simultaneously.
+ *
+ * @example
+ * import { constant, flow } from 'fp-ts/function'
+ * import * as O from 'fp-ts/Option'
+ * import Option = O.Option
+ * import { match2 } from 'fp-ts-std/Option'
+ * import * as Str from 'fp-ts-std/String'
+ *
+ * const f: (x: Option<string>) => (y: Option<number>) => string = match2(
+ *   constant('Who are you?'),
+ *   Str.prepend('Your name is '),
+ *   flow(Str.fromNumber, Str.prepend('Your age is ')),
+ *   name => age => `You are ${name}, ${age}`,
+ * )
+ *
+ * assert.strictEqual(f(O.none)(O.some(40)), 'Your age is 40')
+ * assert.strictEqual(f(O.some("Hodor"))(O.some(40)), 'You are Hodor, 40')
+ *
+ * @category 3 Functions
+ * @since 0.17.0
+ */
+export const match2 =
+  <A, B, C>(
+    onNone: Lazy<C>,
+    onSomeFst: (x: A) => C,
+    onSomeSnd: (x: B) => C,
+    onSomeBoth: (x: A) => (y: B) => C,
+  ) =>
+  (mx: Option<A>) =>
+  (my: Option<B>): C =>
+    pipe(
+      mx,
+      O.match(
+        L.lazy(() => pipe(my, O.match(onNone, onSomeSnd))),
+        x =>
+          pipe(
+            my,
+            O.match(
+              L.lazy(() => onSomeFst(x)),
+              // eslint-disable-next-line functional/prefer-tacit
+              y => onSomeBoth(x)(y),
+            ),
+          ),
+      ),
+    )

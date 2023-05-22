@@ -18,12 +18,15 @@ import {
   isNegative,
   isNonNegative,
   isNonPositive,
+  EnumInt,
+  digits,
 } from "../src/Number"
 import { fromNumber } from "../src/String"
 import fc from "fast-check"
 import * as O from "fp-ts/Option"
 import * as Pred from "fp-ts/Predicate"
 import { Predicate } from "fp-ts/Predicate"
+import { flow } from "fp-ts/function"
 
 describe("Number", () => {
   describe("add", () => {
@@ -303,6 +306,130 @@ describe("Number", () => {
       expect(f(-Infinity)).toBe(true)
 
       fc.assert(fc.property(fc.integer({ max: -1 }), f))
+    })
+  })
+
+  describe("EnumInt", () => {
+    describe("succ", () => {
+      const f = EnumInt.succ
+
+      it("retracts pred", () => {
+        const g = flow(
+          EnumInt.pred,
+          O.chain(EnumInt.succ),
+          O.chain(EnumInt.pred),
+        )
+        const h = EnumInt.pred
+
+        fc.assert(fc.property(fc.integer(), n => expect(g(n)).toEqual(h(n))))
+      })
+
+      it("returns incremented number", () => {
+        expect(f(-123)).toEqual(O.some(-122))
+        expect(f(0)).toEqual(O.some(1))
+        expect(f(123)).toEqual(O.some(124))
+      })
+
+      it("rejects number more than or equal to max", () => {
+        expect(f(Number.MAX_SAFE_INTEGER)).toEqual(O.none)
+        expect(f(Number.MAX_SAFE_INTEGER + 1)).toEqual(O.none)
+        expect(f(Infinity)).toEqual(O.none)
+      })
+
+      it("rejects float", () => {
+        expect(f(-123.5)).toEqual(O.none)
+        expect(f(123.5)).toEqual(O.none)
+      })
+    })
+
+    describe("pred", () => {
+      const f = EnumInt.pred
+
+      it("retracts succ", () => {
+        const g = flow(
+          EnumInt.succ,
+          O.chain(EnumInt.pred),
+          O.chain(EnumInt.succ),
+        )
+        const h = EnumInt.succ
+
+        fc.assert(fc.property(fc.integer(), n => expect(g(n)).toEqual(h(n))))
+      })
+
+      it("returns decremented number", () => {
+        expect(f(-123)).toEqual(O.some(-124))
+        expect(f(0)).toEqual(O.some(-1))
+        expect(f(123)).toEqual(O.some(122))
+      })
+
+      it("rejects number less than or equal to min", () => {
+        expect(f(Number.MIN_SAFE_INTEGER)).toEqual(O.none)
+        expect(f(Number.MIN_SAFE_INTEGER - 1)).toEqual(O.none)
+        expect(f(-Infinity)).toEqual(O.none)
+      })
+
+      it("rejects float", () => {
+        expect(f(-123.5)).toEqual(O.none)
+        expect(f(123.5)).toEqual(O.none)
+      })
+    })
+  })
+
+  describe("digits", () => {
+    const f = digits
+
+    it("works for positive integers", () => {
+      expect(f(1)).toEqual([1])
+      expect(f(123)).toEqual([1, 2, 3])
+      expect(f(101)).toEqual([1, 0, 1])
+
+      fc.assert(
+        fc.property(fc.integer({ min: 1 }), n =>
+          expect(f(n)).toHaveLength(String(n).length),
+        ),
+      )
+    })
+
+    it("strips _ separators", () => {
+      expect(f(1_234_567)).toEqual([1, 2, 3, 4, 5, 6, 7])
+    })
+
+    it("strips - from negative numbers", () => {
+      expect(f(-0)).toEqual([0])
+      expect(f(-123)).toEqual([1, 2, 3])
+
+      fc.assert(
+        fc.property(fc.integer({ max: 0 }), n =>
+          expect(f(n).length).toBeGreaterThan(0),
+        ),
+      )
+    })
+
+    it("strips . from floats", () => {
+      expect(f(1.2)).toEqual([1, 2])
+
+      fc.assert(
+        fc.property(fc.float({ noDefaultInfinity: true }), n =>
+          expect(f(n).length).toBeGreaterThan(0),
+        ),
+      )
+    })
+
+    it("returns empty output for NaN", () => {
+      expect(f(NaN)).toEqual([])
+      expect(f(-NaN)).toEqual([])
+    })
+
+    it("returns empty output for infinities", () => {
+      expect(f(Infinity)).toEqual([])
+      expect(f(-Infinity)).toEqual([])
+    })
+
+    it("alternative notations are implicitly converted to decimals", () => {
+      expect(f(0b101010)).toEqual([4, 2])
+      expect(f(0o52)).toEqual([4, 2])
+      expect(f(0x2a)).toEqual([4, 2])
+      expect(f(2e3)).toEqual([2, 0, 0, 0])
     })
   })
 })

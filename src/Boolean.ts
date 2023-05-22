@@ -6,8 +6,14 @@
  */
 
 import { Endomorphism } from "fp-ts/Endomorphism"
-import { SemigroupAll, SemigroupAny } from "fp-ts/boolean"
+import { SemigroupAll, SemigroupAny, Ord } from "fp-ts/boolean"
 import { curry2 } from "./Function"
+import * as O from "fp-ts/Option"
+import * as Bounded_ from "fp-ts/Bounded"
+type Bounded<A> = Bounded_.Bounded<A>
+import * as Enum_ from "./Enum"
+import Enum = Enum_.Enum
+import * as L from "./Lazy"
 
 /**
  * Invert a boolean.
@@ -18,6 +24,7 @@ import { curry2 } from "./Function"
  * assert.strictEqual(invert(true), false)
  * assert.strictEqual(invert(false), true)
  *
+ * @category 3 Functions
  * @since 0.4.0
  */
 export const invert: Endomorphism<boolean> = x => !x
@@ -32,6 +39,7 @@ export const invert: Endomorphism<boolean> = x => !x
  * assert.strictEqual(and(true)(true), true)
  * assert.strictEqual(and(true)(false), false)
  *
+ * @category 3 Functions
  * @since 0.4.0
  */
 export const and: (x: boolean) => Endomorphism<boolean> = curry2(
@@ -48,6 +56,7 @@ export const and: (x: boolean) => Endomorphism<boolean> = curry2(
  * assert.strictEqual(or(true)(false), true)
  * assert.strictEqual(or(false)(false), false)
  *
+ * @category 3 Functions
  * @since 0.4.0
  */
 export const or: (x: boolean) => Endomorphism<boolean> = curry2(
@@ -64,9 +73,53 @@ export const or: (x: boolean) => Endomorphism<boolean> = curry2(
  * assert.strictEqual(xor(true)(false), true)
  * assert.strictEqual(xor(true)(true), false)
  *
+ * @category 3 Functions
  * @since 0.4.0
  */
 export const xor =
   (x: boolean): Endomorphism<boolean> =>
   y =>
     (x && !y) || (!x && y)
+
+/**
+ * A `Bounded` instance for booleans.
+ *
+ * @example
+ * import { Bounded } from 'fp-ts-std/Boolean'
+ *
+ * assert.strictEqual(Bounded.top, true)
+ * assert.strictEqual(Bounded.bottom, false)
+ *
+ * @category 1 Typeclass Instances
+ * @since 0.17.0
+ */
+export const Bounded: Bounded<boolean> = {
+  ...Ord,
+  top: true,
+  bottom: false,
+}
+
+/**
+ * An `Enum` instance for booleans.
+ *
+ * @example
+ * import * as O from 'fp-ts/Option'
+ * import { Enum } from 'fp-ts-std/Boolean'
+ *
+ * assert.deepStrictEqual(Enum.succ(false), O.some(true))
+ * assert.deepStrictEqual(Enum.succ(true), O.none)
+ *
+ * assert.deepStrictEqual(Enum.pred(true), O.some(false))
+ * assert.deepStrictEqual(Enum.pred(false), O.none)
+ *
+ * @category 1 Typeclass Instances
+ * @since 0.17.0
+ */
+export const Enum: Enum<boolean> = {
+  ...Bounded,
+  succ: x => (x ? O.none : O.some(true)),
+  pred: x => (x ? O.some(false) : O.none),
+  toEnum: n => (n === 1 ? O.some(true) : n === 0 ? O.some(false) : O.none),
+  fromEnum: Number,
+  cardinality: L.of(2),
+}

@@ -14,99 +14,140 @@ Added in v0.12.0
 
 <h2 class="text-delta">Table of contents</h2>
 
-- [utils](#utils)
+- [1 Typeclass Instances](#1-typeclass-instances)
+  - [getBounded](#getbounded)
+  - [getEnum](#getenum)
+  - [getEq](#geteq)
+  - [getOrd](#getord)
+- [2 Typeclass Methods](#2-typeclass-methods)
+  - [mapBoth](#mapboth)
+  - [traverseToFst](#traversetofst)
+  - [traverseToSnd](#traversetosnd)
+- [3 Functions](#3-functions)
   - [create](#create)
   - [dup](#dup)
   - [fanout](#fanout)
-  - [mapBoth](#mapboth)
   - [toFst](#tofst)
   - [toSnd](#tosnd)
-  - [traverseToFst](#traversetofst)
-  - [traverseToSnd](#traversetosnd)
   - [withFst](#withfst)
   - [withSnd](#withsnd)
 
 ---
 
-# utils
+# 1 Typeclass Instances
 
-## create
+## getBounded
 
-Create a tuple. Helps with fighting TypeScript's type inferrence without
-having to repeat yourself or use `as const`.
+Derive a `Bounded` instance for a tuple in which the top and bottom
+bounds are `[A.top, B.top]` and `[A.bottom, B.bottom]` respectively.
 
 **Signature**
 
 ```ts
-export declare const create: <A, B>(xs: [A, B]) => [A, B]
+export declare const getBounded: <A>(BA: Bounded<A>) => <B>(BB: Bounded<B>) => Bounded<[A, B]>
 ```
 
 ```hs
-create :: [a, b] -> [a, b]
+getBounded :: Bounded a -> Bounded b -> Bounded [a, b]
+```
+
+Added in v0.17.0
+
+## getEnum
+
+Derive an `Enum` instance for a tuple given an `Enum` instance for each
+member.
+
+**Signature**
+
+```ts
+export declare const getEnum: <A>(EA: Enum<A>) => <B>(EB: Enum<B>) => Enum<[A, B]>
+```
+
+```hs
+getEnum :: Enum a -> Enum b -> Enum [a, b]
 ```
 
 **Example**
 
 ```ts
-import { create } from 'fp-ts-std/Tuple'
+import { universe } from 'fp-ts-std/Enum'
+import { Enum as EnumBool } from 'fp-ts-std/Boolean'
+import { getEnum } from 'fp-ts-std/Tuple'
 
-assert.deepStrictEqual(create(['x', 'y']), ['x', 'y'])
+const E = getEnum(EnumBool)(EnumBool)
+
+assert.deepStrictEqual(universe(E), [
+  [false, false],
+  [true, false],
+  [false, true],
+  [true, true],
+])
 ```
 
-Added in v0.12.0
+Added in v0.17.0
 
-## dup
+## getEq
 
-Duplicate a value into a tuple.
+Derive `Eq` for a tuple given `Eq` instances for its members.
 
 **Signature**
 
 ```ts
-export declare const dup: <A>(x: A) => [A, A]
+export declare const getEq: <A>(EA: Eq<A>) => <B>(EB: Eq<B>) => Eq<[A, B]>
 ```
 
 ```hs
-dup :: a -> [a, a]
+getEq :: Eq a -> Eq b -> Eq [a, b]
 ```
 
 **Example**
 
 ```ts
-import { dup } from 'fp-ts-std/Tuple'
+import { getEq } from 'fp-ts-std/Tuple'
+import * as Str from 'fp-ts/string'
+import * as Num from 'fp-ts/number'
 
-assert.deepStrictEqual(dup('x'), ['x', 'x'])
+const Eq = getEq(Str.Eq)(Num.Eq)
+
+assert.strictEqual(Eq.equals(['foo', 123], ['foo', 123]), true)
+assert.strictEqual(Eq.equals(['foo', 123], ['bar', 123]), false)
 ```
 
-Added in v0.12.0
+Added in v0.17.0
 
-## fanout
+## getOrd
 
-Send an input to two functions and combine their outputs in a tuple. For a
-variadic version, consider `fork` in `Function`.
+Derive `Ord` for a tuple given `Ord` instances for its members. The first
+component is compared first.
 
 **Signature**
 
 ```ts
-export declare const fanout: <A, B>(f: (x: A) => B) => <C>(g: (x: A) => C) => (x: A) => [B, C]
+export declare const getOrd: <A>(OA: Ord<A>) => <B>(OB: Ord<B>) => Ord<[A, B]>
 ```
 
 ```hs
-fanout :: (a -> b) -> (a -> c) -> a -> [b, c]
+getOrd :: Ord a -> Ord b -> Ord [a, b]
 ```
 
 **Example**
 
 ```ts
-import { fanout } from 'fp-ts-std/Tuple'
-import { add } from 'fp-ts-std/Number'
-import * as S from 'fp-ts-std/String'
+import { getOrd } from 'fp-ts-std/Tuple'
+import * as Str from 'fp-ts/string'
+import * as Num from 'fp-ts/number'
+import { LT, EQ, GT } from 'fp-ts-std/Ordering'
 
-const add2 = add(2)
+const Ord = getOrd(Str.Ord)(Num.Ord)
 
-assert.deepStrictEqual(fanout(S.fromNumber)(add2)(0), ['0', 2])
+assert.strictEqual(Ord.compare(['foo', 123], ['foo', 123]), EQ)
+assert.strictEqual(Ord.compare(['foo', 123], ['bar', 123]), GT)
 ```
 
-Added in v0.15.0
+Added in v0.17.0
+
+# 2 Typeclass Methods
 
 ## mapBoth
 
@@ -135,58 +176,6 @@ assert.deepStrictEqual(xs, [6, 10])
 ```
 
 Added in v0.14.0
-
-## toFst
-
-Apply a function, collecting the output alongside the input. A dual to
-`toSnd`.
-
-**Signature**
-
-```ts
-export declare const toFst: <A, B>(f: (x: A) => B) => (x: A) => [B, A]
-```
-
-```hs
-toFst :: (a -> b) -> a -> [b, a]
-```
-
-**Example**
-
-```ts
-import { toFst } from 'fp-ts-std/Tuple'
-import { fromNumber } from 'fp-ts-std/String'
-
-assert.deepStrictEqual(toFst(fromNumber)(5), ['5', 5])
-```
-
-Added in v0.12.0
-
-## toSnd
-
-Apply a function, collecting the input alongside the output. A dual to
-`toFst`.
-
-**Signature**
-
-```ts
-export declare const toSnd: <A, B>(f: (x: A) => B) => (x: A) => [A, B]
-```
-
-```hs
-toSnd :: (a -> b) -> a -> [a, b]
-```
-
-**Example**
-
-```ts
-import { toFst } from 'fp-ts-std/Tuple'
-import { fromNumber } from 'fp-ts-std/String'
-
-assert.deepStrictEqual(toFst(fromNumber)(5), ['5', 5])
-```
-
-Added in v0.12.0
 
 ## traverseToFst
 
@@ -288,6 +277,138 @@ const fromNumberO = flow(fromNumber, O.some)
 
 assert.deepStrictEqual(traverseToSndO(fromNumberO)(5), O.some([5, '5']))
 assert.deepStrictEqual(traverseToSndO(constant(O.none))(5), O.none)
+```
+
+Added in v0.12.0
+
+# 3 Functions
+
+## create
+
+Create a tuple. Helps with fighting TypeScript's type inferrence without
+having to repeat yourself or use `as const`.
+
+**Signature**
+
+```ts
+export declare const create: <A, B>(xs: [A, B]) => [A, B]
+```
+
+```hs
+create :: [a, b] -> [a, b]
+```
+
+**Example**
+
+```ts
+import { create } from 'fp-ts-std/Tuple'
+
+assert.deepStrictEqual(create(['x', 'y']), ['x', 'y'])
+```
+
+Added in v0.12.0
+
+## dup
+
+Duplicate a value into a tuple.
+
+**Signature**
+
+```ts
+export declare const dup: <A>(x: A) => [A, A]
+```
+
+```hs
+dup :: a -> [a, a]
+```
+
+**Example**
+
+```ts
+import { dup } from 'fp-ts-std/Tuple'
+
+assert.deepStrictEqual(dup('x'), ['x', 'x'])
+```
+
+Added in v0.12.0
+
+## fanout
+
+Send an input to two functions and combine their outputs in a tuple. For a
+variadic version, consider `fork` in `Function`.
+
+**Signature**
+
+```ts
+export declare const fanout: <A, B>(f: (x: A) => B) => <C>(g: (x: A) => C) => (x: A) => [B, C]
+```
+
+```hs
+fanout :: (a -> b) -> (a -> c) -> a -> [b, c]
+```
+
+**Example**
+
+```ts
+import { fanout } from 'fp-ts-std/Tuple'
+import { add } from 'fp-ts-std/Number'
+import * as S from 'fp-ts-std/String'
+
+const add2 = add(2)
+
+assert.deepStrictEqual(fanout(S.fromNumber)(add2)(0), ['0', 2])
+```
+
+Added in v0.15.0
+
+## toFst
+
+Apply a function, collecting the output alongside the input. A dual to
+`toSnd`.
+
+**Signature**
+
+```ts
+export declare const toFst: <A, B>(f: (x: A) => B) => (x: A) => [B, A]
+```
+
+```hs
+toFst :: (a -> b) -> a -> [b, a]
+```
+
+**Example**
+
+```ts
+import { toFst } from 'fp-ts-std/Tuple'
+import { fromNumber } from 'fp-ts-std/String'
+
+assert.deepStrictEqual(toFst(fromNumber)(5), ['5', 5])
+```
+
+Added in v0.12.0
+
+## toSnd
+
+Apply a function, collecting the input alongside the output. A dual to
+`toFst`.
+
+**Signature**
+
+```ts
+export declare const toSnd: <A, B>(f: (x: A) => B) => (x: A) => [A, B]
+```
+
+```hs
+toSnd :: (a -> b) -> a -> [a, b]
+```
+
+**Example**
+
+```ts
+import { toFst } from 'fp-ts-std/Tuple'
+import { fromNumber } from 'fp-ts-std/String'
+
+assert.deepStrictEqual(toFst(fromNumber)(5), ['5', 5])
 ```
 
 Added in v0.12.0

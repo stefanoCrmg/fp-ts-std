@@ -14,9 +14,13 @@ Added in v0.1.0
 
 <h2 class="text-delta">Table of contents</h2>
 
-- [utils](#utils)
+- [1 Typeclass Instances](#1-typeclass-instances)
+  - [BoundedSafe](#boundedsafe)
+  - [EnumInt](#enumint)
+- [3 Functions](#3-functions)
   - [add](#add)
   - [decrement](#decrement)
+  - [digits](#digits)
   - [divide](#divide)
   - [floatFromString](#floatfromstring)
   - [fromString](#fromstring)
@@ -37,7 +41,60 @@ Added in v0.1.0
 
 ---
 
-# utils
+# 1 Typeclass Instances
+
+## BoundedSafe
+
+An alternative `Bounded` instance for numbers which defines top and bottom
+as `Number.MAX_SAFE_INTEGER` and `Number.MIN_SAFE_INTEGER` respectively.
+
+**Signature**
+
+```ts
+export declare const BoundedSafe: Bounded<number>
+```
+
+```hs
+BoundedSafe :: Bounded number
+```
+
+Added in v0.17.0
+
+## EnumInt
+
+An unlawful but predictable instance of `Enum` for numbers, representing
+integers between `Number.MIN_SAFE_INTEGER` and `Number.MAX_SAFE_INTEGER`.
+
+Invalid inputs will return `None` for both `succ` and `pred`.
+
+`toEnum` and `fromEnum` do not modify the input.
+
+**Signature**
+
+```ts
+export declare const EnumInt: Enum<number>
+```
+
+```hs
+EnumInt :: Enum number
+```
+
+**Example**
+
+```ts
+import * as O from 'fp-ts/Option'
+import { EnumInt } from 'fp-ts-std/Number'
+
+assert.deepStrictEqual(EnumInt.succ(123), O.some(124))
+assert.deepStrictEqual(EnumInt.succ(123.5), O.none)
+
+assert.deepStrictEqual(EnumInt.pred(123), O.some(122))
+assert.deepStrictEqual(EnumInt.pred(123.5), O.none)
+```
+
+Added in v0.17.0
+
+# 3 Functions
 
 ## add
 
@@ -86,6 +143,38 @@ assert.strictEqual(decrement(3), 2)
 ```
 
 Added in v0.1.0
+
+## digits
+
+Returns the individual digits of a number.
+
+Non-numeric characters like `-`, `.`, and `_` are supported in the input and
+will be removed.
+
+Values in non-decimal notations are implicitly converted to decimal notation
+in JavaScript.
+
+An empty array is returned for values like `NaN` and `Infinity`.
+
+**Signature**
+
+```ts
+export declare const digits: (n: number) => Array<number>
+```
+
+```hs
+digits :: number -> Array number
+```
+
+**Example**
+
+```ts
+import { digits } from 'fp-ts-std/Number'
+
+assert.deepStrictEqual(digits(123), [1, 2, 3])
+```
+
+Added in v0.17.0
 
 ## divide
 

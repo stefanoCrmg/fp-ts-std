@@ -14,6 +14,12 @@ import { construct, invoke, isInstanceOf } from "./Function"
 import { Predicate } from "fp-ts/Predicate"
 import * as NEA from "fp-ts/NonEmptyArray"
 import NonEmptyArray = NEA.NonEmptyArray
+import * as A from "fp-ts/Array"
+import { fromIterable } from "./Array"
+import { mapSnd } from "fp-ts/Tuple"
+import * as Str from "fp-ts/string"
+import { withFst } from "./Tuple"
+import { Endomorphism } from "fp-ts/Endomorphism"
 
 /**
  * An empty `URLSearchParams`.
@@ -23,6 +29,7 @@ import NonEmptyArray = NEA.NonEmptyArray
  *
  * assert.deepStrictEqual(empty, new URLSearchParams())
  *
+ * @category 3 Functions
  * @since 0.2.0
  */
 export const empty: URLSearchParams = construct(URLSearchParams)([])
@@ -36,6 +43,7 @@ export const empty: URLSearchParams = construct(URLSearchParams)([])
  * assert.strictEqual(isEmpty(new URLSearchParams()), true)
  * assert.strictEqual(isEmpty(new URLSearchParams({ k: 'v' })), false)
  *
+ * @category 3 Functions
  * @since 0.16.0
  */
 export const isEmpty: Predicate<URLSearchParams> = u =>
@@ -51,10 +59,26 @@ export const isEmpty: Predicate<URLSearchParams> = u =>
  *
  * assert.deepStrictEqual(fromString(x), new URLSearchParams(x))
  *
+ * @category 3 Functions
  * @since 0.2.0
  */
 export const fromString = (x: string): URLSearchParams =>
   pipe([x], construct(URLSearchParams))
+
+/**
+ * Returns a query string suitable for use in a URL, absent a question mark.
+ *
+ * @example
+ * import { toString } from 'fp-ts-std/URLSearchParams'
+ *
+ * const x = new URLSearchParams('a=b&c=d')
+ *
+ * assert.strictEqual(toString(x), 'a=b&c=d')
+ *
+ * @category 3 Functions
+ * @since 0.17.0
+ */
+export const toString = (x: URLSearchParams): string => x.toString()
 
 /**
  * Parse a `URLSearchParams` from an array of tuples.
@@ -66,10 +90,27 @@ export const fromString = (x: string): URLSearchParams =>
  *
  * assert.deepStrictEqual(fromTuples(x), new URLSearchParams(x))
  *
+ * @category 3 Functions
  * @since 0.2.0
  */
 export const fromTuples = (x: Array<[string, string]>): URLSearchParams =>
   pipe([x], construct(URLSearchParams))
+
+/**
+ * Losslessly convert a `URLSearchParams` to an array of tuples.
+ *
+ * @example
+ * import { toTuples } from 'fp-ts-std/URLSearchParams'
+ *
+ * const x = new URLSearchParams('a=b&c=d&a=e')
+ *
+ * assert.deepStrictEqual(toTuples(x), [['a', 'b'], ['c', 'd'], ['a', 'e']])
+ *
+ * @category 3 Functions
+ * @since 0.17.0
+ */
+export const toTuples = (x: URLSearchParams): Array<[string, string]> =>
+  pipe(x.entries(), fromIterable)
 
 /**
  * Parse a `URLSearchParams` from a record.
@@ -77,16 +118,42 @@ export const fromTuples = (x: Array<[string, string]>): URLSearchParams =>
  * @example
  * import { fromRecord } from 'fp-ts-std/URLSearchParams'
  *
- * const x = { a: 'b', c: 'd' }
+ * const r = { a: ['b', 'c'], d: ['e'] }
+ * const s = 'a=b&a=c&d=e'
  *
- * assert.deepStrictEqual(fromRecord(x), new URLSearchParams(x))
+ * assert.deepStrictEqual(fromRecord(r), new URLSearchParams(s))
  *
+ * @category 3 Functions
  * @since 0.2.0
  */
-export const fromRecord: (x: Record<string, string>) => URLSearchParams = flow(
-  R.toArray,
-  fromTuples,
-)
+export const fromRecord: (x: Record<string, Array<string>>) => URLSearchParams =
+  flow(
+    R.foldMapWithIndex(Str.Ord)(A.getMonoid<[string, string]>())((k, vs) =>
+      pipe(vs, A.map(withFst(k))),
+    ),
+    fromTuples,
+  )
+
+/**
+ * Convert a `URLSearchParams` to a record, grouping values by keys.
+ *
+ * @example
+ * import { toRecord } from 'fp-ts-std/URLSearchParams'
+ *
+ * const x = new URLSearchParams('a=b&c=d&a=e')
+ *
+ * assert.deepStrictEqual(toRecord(x), { a: ['b', 'e'], c: ['d'] })
+ *
+ * @category 3 Functions
+ * @since 0.17.0
+ */
+export const toRecord = (
+  x: URLSearchParams,
+): Record<string, NonEmptyArray<string>> =>
+  R.fromFoldableMap(NEA.getSemigroup<string>(), A.Foldable)(
+    toTuples(x),
+    mapSnd(NEA.of),
+  )
 
 /**
  * Clone a `URLSearchParams`.
@@ -99,6 +166,7 @@ export const fromRecord: (x: Record<string, string>) => URLSearchParams = flow(
  * assert.strictEqual(x === clone(x), false)
  * assert.deepStrictEqual(x, clone(x))
  *
+ * @category 3 Functions
  * @since 0.2.0
  */
 export const clone = (x: URLSearchParams): URLSearchParams =>
@@ -115,6 +183,7 @@ export const clone = (x: URLSearchParams): URLSearchParams =>
  * assert.deepStrictEqual(isURLSearchParams(x), true)
  * assert.deepStrictEqual(isURLSearchParams({ not: { a: 'urlsearchparams' } }), false)
  *
+ * @category 3 Functions
  * @since 0.1.0
  */
 export const isURLSearchParams: Refinement<unknown, URLSearchParams> =
@@ -132,6 +201,7 @@ export const isURLSearchParams: Refinement<unknown, URLSearchParams> =
  * assert.deepStrictEqual(getParam('c')(x), O.some('d1'))
  * assert.deepStrictEqual(getParam('e')(x), O.none)
  *
+ * @category 3 Functions
  * @since 0.1.0
  */
 export const getParam = (
@@ -152,6 +222,7 @@ export const getParam = (
  * assert.deepStrictEqual(getAllForParam('c')(x), O.some(['d1', 'd2']))
  * assert.deepStrictEqual(getAllForParam('e')(x), O.none)
  *
+ * @category 3 Functions
  * @since 0.16.0
  */
 export const getAllForParam = (
@@ -174,13 +245,14 @@ export const getAllForParam = (
  * assert.deepStrictEqual(f(x), O.some('d'))
  * assert.deepStrictEqual(f(y), O.some('e'))
  *
+ * @category 3 Functions
  * @since 0.1.0
  */
 export const setParam =
   (k: string) =>
-  (v: string) =>
-  (x: URLSearchParams): URLSearchParams => {
+  (v: string): Endomorphism<URLSearchParams> =>
+  (x): URLSearchParams => {
     const y = clone(x)
-    y.set(k, v) // eslint-disable-line functional/no-expression-statement
+    y.set(k, v) // eslint-disable-line functional/no-expression-statements
     return y
   }

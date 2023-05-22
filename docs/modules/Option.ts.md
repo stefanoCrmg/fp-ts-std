@@ -14,20 +14,73 @@ Added in v0.1.0
 
 <h2 class="text-delta">Table of contents</h2>
 
-- [utils](#utils)
+- [1 Typeclass Instances](#1-typeclass-instances)
+  - [getBounded](#getbounded)
+  - [getEnum](#getenum)
+- [2 Typeclass Methods](#2-typeclass-methods)
   - [altAllBy](#altallby)
-  - [invert](#invert)
   - [memptyUnless](#memptyunless)
   - [memptyWhen](#memptywhen)
-  - [noneAs](#noneas)
   - [pureIf](#pureif)
   - [toMonoid](#tomonoid)
+- [3 Functions](#3-functions)
+  - [invert](#invert)
+  - [match2](#match2)
+  - [noneAs](#noneas)
   - [unsafeExpect](#unsafeexpect)
   - [unsafeUnwrap](#unsafeunwrap)
 
 ---
 
-# utils
+# 1 Typeclass Instances
+
+## getBounded
+
+Derive a `Bounded` instance for `Option<A>` in which the top and bottom
+bounds are `Some(B.top)` and `None` respectively.
+
+**Signature**
+
+```ts
+export declare const getBounded: <A>(B: Bounded<A>) => Bounded<Option<A>>
+```
+
+```hs
+getBounded :: Bounded a -> Bounded (Option a)
+```
+
+Added in v0.17.0
+
+## getEnum
+
+Derive an `Enum` instance for `Option<A>` given an `Enum` instance for `A`.
+
+**Signature**
+
+```ts
+export declare const getEnum: <A>(E: Enum<A>) => Enum<Option<A>>
+```
+
+```hs
+getEnum :: Enum a -> Enum (Option a)
+```
+
+**Example**
+
+```ts
+import { universe } from 'fp-ts-std/Enum'
+import { Enum as EnumBool } from 'fp-ts-std/Boolean'
+import * as O from 'fp-ts/Option'
+import { getEnum as getEnumO } from 'fp-ts-std/Option'
+
+const EnumBoolO = getEnumO(EnumBool)
+
+assert.deepStrictEqual(universe(EnumBoolO), [O.none, O.some(false), O.some(true)])
+```
+
+Added in v0.17.0
+
+# 2 Typeclass Methods
 
 ## altAllBy
 
@@ -57,41 +110,6 @@ assert.deepStrictEqual(altAllBy([constant(O.none), O.some])('foo'), O.some('foo'
 
 Added in v0.15.0
 
-## invert
-
-Given an unwrapped value and an associated `Eq` instance for determining
-equivalence, inverts an `Option` that may contain the same value, something
-else, or nothing.
-
-This can be useful for circumstances in which you want to in a sense toggle
-an `Option` value.
-
-**Signature**
-
-```ts
-export declare const invert: <A>(eq: Eq<A>) => (val: A) => Endomorphism<Option<A>>
-```
-
-```hs
-invert :: Eq a -> a -> Endomorphism (Option a)
-```
-
-**Example**
-
-```ts
-import { invert } from 'fp-ts-std/Option'
-import * as O from 'fp-ts/Option'
-import * as S from 'fp-ts/string'
-
-const f = invert(S.Eq)('x')
-
-assert.deepStrictEqual(f(O.none), O.some('x'))
-assert.deepStrictEqual(f(O.some('y')), O.some('x'))
-assert.deepStrictEqual(f(O.some('x')), O.none)
-```
-
-Added in v0.12.0
-
 ## memptyUnless
 
 Conditionally returns the provided `Option` or `None`. The dual to
@@ -100,11 +118,7 @@ Conditionally returns the provided `Option` or `None`. The dual to
 **Signature**
 
 ```ts
-export declare const memptyUnless: (x: boolean) => <A>(m: Lazy<Option<A>>) => Option<A>
-```
-
-```hs
-memptyUnless :: boolean -> Lazy (Option a) -> Option a
+export declare const memptyUnless: (x: boolean) => <A>(m: L.Lazy<Option<A>>) => Option<A>
 ```
 
 **Example**
@@ -130,11 +144,7 @@ Conditionally returns the provided `Option` or `None`. The dual to
 **Signature**
 
 ```ts
-export declare const memptyWhen: (x: boolean) => <A>(m: Lazy<Option<A>>) => Option<A>
-```
-
-```hs
-memptyWhen :: boolean -> Lazy (Option a) -> Option a
+export declare const memptyWhen: (x: boolean) => <A>(m: L.Lazy<Option<A>>) => Option<A>
 ```
 
 **Example**
@@ -152,34 +162,6 @@ assert.deepStrictEqual(memptyWhen(false)(constant(O.none)), O.none)
 
 Added in v0.13.0
 
-## noneAs
-
-A thunked `None` constructor. Enables specifying the type of the `Option`
-without a type assertion. Helpful in certain circumstances in which type
-inferrence isn't smart enough to unify with the `Option<never>` of the
-standard `None` constructor.
-
-**Signature**
-
-```ts
-export declare const noneAs: <A>() => Option<A>
-```
-
-```hs
-noneAs :: () -> Option a
-```
-
-**Example**
-
-```ts
-import { noneAs } from 'fp-ts-std/Option'
-import * as O from 'fp-ts/Option'
-
-assert.deepStrictEqual(noneAs<any>(), O.none)
-```
-
-Added in v0.12.0
-
 ## pureIf
 
 Conditionally lifts a value to `Some` or returns `None`. The lazy value is
@@ -188,11 +170,7 @@ evaluated only if the condition passes.
 **Signature**
 
 ```ts
-export declare const pureIf: (x: boolean) => <A>(y: Lazy<A>) => Option<A>
-```
-
-```hs
-pureIf :: boolean -> Lazy a -> Option a
+export declare const pureIf: (x: boolean) => <A>(y: L.Lazy<A>) => Option<A>
 ```
 
 **Example**
@@ -235,6 +213,108 @@ const f = toMonoid(Str.Monoid)
 
 assert.deepStrictEqual(f(O.some('x')), 'x')
 assert.deepStrictEqual(f(O.none), '')
+```
+
+Added in v0.12.0
+
+# 3 Functions
+
+## invert
+
+Given an unwrapped value and an associated `Eq` instance for determining
+equivalence, inverts an `Option` that may contain the same value, something
+else, or nothing.
+
+This can be useful for circumstances in which you want to in a sense toggle
+an `Option` value.
+
+**Signature**
+
+```ts
+export declare const invert: <A>(eq: Eq<A>) => (val: A) => Endomorphism<Option<A>>
+```
+
+```hs
+invert :: Eq a -> a -> Endomorphism (Option a)
+```
+
+**Example**
+
+```ts
+import { invert } from 'fp-ts-std/Option'
+import * as O from 'fp-ts/Option'
+import * as S from 'fp-ts/string'
+
+const f = invert(S.Eq)('x')
+
+assert.deepStrictEqual(f(O.none), O.some('x'))
+assert.deepStrictEqual(f(O.some('y')), O.some('x'))
+assert.deepStrictEqual(f(O.some('x')), O.none)
+```
+
+Added in v0.12.0
+
+## match2
+
+Pattern match against two `Option`s simultaneously.
+
+**Signature**
+
+```ts
+export declare const match2: <A, B, C>(
+  onNone: L.Lazy<C>,
+  onSomeFst: (x: A) => C,
+  onSomeSnd: (x: B) => C,
+  onSomeBoth: (x: A) => (y: B) => C
+) => (mx: Option<A>) => (my: Option<B>) => C
+```
+
+**Example**
+
+```ts
+import { constant, flow } from 'fp-ts/function'
+import * as O from 'fp-ts/Option'
+import Option = O.Option
+import { match2 } from 'fp-ts-std/Option'
+import * as Str from 'fp-ts-std/String'
+
+const f: (x: Option<string>) => (y: Option<number>) => string = match2(
+  constant('Who are you?'),
+  Str.prepend('Your name is '),
+  flow(Str.fromNumber, Str.prepend('Your age is ')),
+  (name) => (age) => `You are ${name}, ${age}`
+)
+
+assert.strictEqual(f(O.none)(O.some(40)), 'Your age is 40')
+assert.strictEqual(f(O.some('Hodor'))(O.some(40)), 'You are Hodor, 40')
+```
+
+Added in v0.17.0
+
+## noneAs
+
+A thunked `None` constructor. Enables specifying the type of the `Option`
+without a type assertion. Helpful in certain circumstances in which type
+inferrence isn't smart enough to unify with the `Option<never>` of the
+standard `None` constructor.
+
+**Signature**
+
+```ts
+export declare const noneAs: <A>() => Option<A>
+```
+
+```hs
+noneAs :: () -> Option a
+```
+
+**Example**
+
+```ts
+import { noneAs } from 'fp-ts-std/Option'
+import * as O from 'fp-ts/Option'
+
+assert.deepStrictEqual(noneAs<any>(), O.none)
 ```
 
 Added in v0.12.0

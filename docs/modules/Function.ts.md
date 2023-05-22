@@ -1,6 +1,6 @@
 ---
 title: Function.ts
-nav_order: 11
+nav_order: 12
 parent: Modules
 ---
 
@@ -17,16 +17,20 @@ Added in v0.1.0
 
 <h2 class="text-delta">Table of contents</h2>
 
-- [utils](#utils)
+- [1 Typeclass Instances](#1-typeclass-instances)
   - [Applicative](#applicative)
   - [Functor](#functor)
   - [Monad](#monad)
-  - [URI](#uri)
-  - [URI (type alias)](#uri-type-alias)
+- [2 Typeclass Methods](#2-typeclass-methods)
   - [ap](#ap)
-  - [applyEvery](#applyevery)
-  - [applySomes](#applysomes)
   - [chain](#chain)
+  - [flatMap](#flatmap)
+  - [map](#map)
+  - [of](#of)
+- [3 Functions](#3-functions)
+  - [applyEvery](#applyevery)
+  - [applyN](#applyn)
+  - [applySomes](#applysomes)
   - [construct](#construct)
   - [converge](#converge)
   - [curry2](#curry2)
@@ -44,9 +48,7 @@ Added in v0.1.0
   - [invokeNullary](#invokenullary)
   - [invokeOn](#invokeon)
   - [isInstanceOf](#isinstanceof)
-  - [map](#map)
   - [memoize](#memoize)
-  - [of](#of)
   - [unary](#unary)
   - [uncurry2](#uncurry2)
   - [uncurry3](#uncurry3)
@@ -56,10 +58,13 @@ Added in v0.1.0
   - [until](#until)
   - [when](#when)
   - [withIndex](#withindex)
+- [4 Minutiae](#4-minutiae)
+  - [URI](#uri)
+  - [URI (type alias)](#uri-type-alias)
 
 ---
 
-# utils
+# 1 Typeclass Instances
 
 ## Applicative
 
@@ -112,37 +117,7 @@ Monad :: Monad2 "Function"
 
 Added in v0.15.0
 
-## URI
-
-Typeclass machinery.
-
-**Signature**
-
-```ts
-export declare const URI: 'Function'
-```
-
-```hs
-URI :: "Function"
-```
-
-Added in v0.15.0
-
-## URI (type alias)
-
-Typeclass machinery.
-
-**Signature**
-
-```ts
-export type URI = typeof URI
-```
-
-```hs
-type URI = typeof URI
-```
-
-Added in v0.15.0
+# 2 Typeclass Methods
 
 ## ap
 
@@ -160,6 +135,74 @@ ap :: (a -> b) -> (a -> b -> c) -> a -> c
 ```
 
 Added in v0.15.0
+
+## chain
+
+Fork an input across a binary and a tertiary function, applying the output of
+the former to the latter. As it applies to functions this is essentially
+`ap` with some flips thrown in.
+
+**Signature**
+
+```ts
+export declare const chain: <A, B, C>(f: (x: B) => (y: A) => C) => (g: (x: A) => B) => (x: A) => C
+```
+
+```hs
+chain :: (b -> a -> c) -> (a -> b) -> a -> c
+```
+
+Added in v0.15.0
+
+## flatMap
+
+Alias of `chain`.
+
+**Signature**
+
+```ts
+export declare const flatMap: <A, B, C>(f: (x: B) => (y: A) => C) => (g: (x: A) => B) => (x: A) => C
+```
+
+```hs
+flatMap :: (b -> a -> c) -> (a -> b) -> a -> c
+```
+
+Added in v0.17.0
+
+## map
+
+Map a unary function's output. Equivalent to function composition.
+
+**Signature**
+
+```ts
+export declare const map: <B, C>(f: (x: B) => C) => <A>(g: (x: A) => B) => (x: A) => C
+```
+
+```hs
+map :: (b -> c) -> (a -> b) -> a -> c
+```
+
+Added in v0.15.0
+
+## of
+
+Lift a value to a function from any other value. Equivalent to `constant`.
+
+**Signature**
+
+```ts
+export declare const of: <A>(x: A) => <B>(y: B) => A
+```
+
+```hs
+of :: a -> b -> a
+```
+
+Added in v0.15.0
+
+# 3 Functions
 
 ## applyEvery
 
@@ -191,6 +234,34 @@ assert.deepStrictEqual(g(3), 12)
 
 Added in v0.12.0
 
+## applyN
+
+Apply a function the specified number of times. `n` will be normalised to a
+non-negative integer according to the semantics of `A.replicate`.
+
+**Signature**
+
+```ts
+export declare const applyN: (n: number) => <A>(f: Endomorphism<A>) => Endomorphism<A>
+```
+
+```hs
+applyN :: number -> Endomorphism a -> Endomorphism a
+```
+
+**Example**
+
+```ts
+import { applyN } from 'fp-ts-std/Function'
+import { increment } from 'fp-ts-std/Number'
+
+const add3 = applyN(3)(increment)
+
+assert.strictEqual(add3(2), 5)
+```
+
+Added in v0.17.0
+
 ## applySomes
 
 Apply an array of potential endomorphisms from left-to-right, skipping any
@@ -219,24 +290,6 @@ assert.deepStrictEqual(g(3), 12)
 ```
 
 Added in v0.13.0
-
-## chain
-
-Fork an input across a binary and a tertiary function, applying the output of
-the former to the latter. As it applies to functions this is essentially
-`ap` with some flips thrown in.
-
-**Signature**
-
-```ts
-export declare const chain: <A, B, C>(f: (x: B) => (y: A) => C) => (g: (x: A) => B) => (x: A) => C
-```
-
-```hs
-chain :: (b -> a -> c) -> (a -> b) -> a -> c
-```
-
-Added in v0.15.0
 
 ## construct
 
@@ -727,11 +780,11 @@ absolutely must test a prototype.
 **Signature**
 
 ```ts
-export declare const isInstanceOf: <A>(x: new (...args: Array<any>) => unknown) => Refinement<unknown, A>
+export declare const isInstanceOf: <A>(x: new (...args: Array<any>) => A) => Refinement<unknown, A>
 ```
 
 ```hs
-isInstanceOf :: (...Array any -> unknown) -> Refinement unknown a
+isInstanceOf :: (...Array any -> a) -> Refinement unknown a
 ```
 
 **Example**
@@ -746,22 +799,6 @@ assert.strictEqual(isStringInstance(new String('ciao')), true)
 ```
 
 Added in v0.12.0
-
-## map
-
-Map a unary function's output. Equivalent to function composition.
-
-**Signature**
-
-```ts
-export declare const map: <B, C>(f: (x: B) => C) => <A>(g: (x: A) => B) => (x: A) => C
-```
-
-```hs
-map :: (b -> c) -> (a -> b) -> a -> c
-```
-
-Added in v0.15.0
 
 ## memoize
 
@@ -807,25 +844,9 @@ assert.strictEqual(runs, 1)
 
 Added in v0.7.0
 
-## of
-
-Lift a value to a function from any other value. Equivalent to `constant`.
-
-**Signature**
-
-```ts
-export declare const of: <A>(x: A) => <B>(y: B) => A
-```
-
-```hs
-of :: a -> b -> a
-```
-
-Added in v0.15.0
-
 ## unary
 
-Converts a variadic function to a unary function.
+Converts a variadic function to a unary function. Alias of `tupled`.
 
 Whilst this isn't very useful for functions that ought to be curried,
 it is helpful for functions which take an indefinite number of arguments
@@ -1098,3 +1119,37 @@ assert.deepStrictEqual(mapWithIndex((i) => (x) => x + i)([1, 2, 3]), [1, 3, 5])
 ```
 
 Added in v0.5.0
+
+# 4 Minutiae
+
+## URI
+
+Typeclass machinery.
+
+**Signature**
+
+```ts
+export declare const URI: 'Function'
+```
+
+```hs
+URI :: "Function"
+```
+
+Added in v0.15.0
+
+## URI (type alias)
+
+Typeclass machinery.
+
+**Signature**
+
+```ts
+export type URI = typeof URI
+```
+
+```hs
+type URI = typeof URI
+```
+
+Added in v0.15.0

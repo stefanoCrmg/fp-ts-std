@@ -17,6 +17,7 @@ import {
   apply,
   constant,
   flip,
+  tupled,
 } from "fp-ts/function"
 import { Predicate, not } from "fp-ts/Predicate"
 import { Endomorphism, getMonoid as getEndoMonoid } from "fp-ts/Endomorphism"
@@ -31,6 +32,7 @@ import { Monad2 } from "fp-ts/Monad"
 /**
  * Typeclass machinery.
  *
+ * @category 4 Minutiae
  * @since 0.15.0
  */
 export const URI = "Function"
@@ -38,6 +40,7 @@ export const URI = "Function"
 /**
  * Typeclass machinery.
  *
+ * @category 4 Minutiae
  * @since 0.15.0
  */
 export type URI = typeof URI
@@ -51,6 +54,7 @@ declare module "fp-ts/HKT" {
 /**
  * Map a unary function's output. Equivalent to function composition.
  *
+ * @category 2 Typeclass Methods
  * @since 0.15.0
  */
 export const map: <B, C>(
@@ -61,6 +65,7 @@ export const map: <B, C>(
  * Formal `Functor` instance for unary functions to be provided to
  * higher-kinded functions that require it.
  *
+ * @category 1 Typeclass Instances
  * @since 0.15.0
  */
 export const Functor: Functor2<URI> = {
@@ -71,6 +76,7 @@ export const Functor: Functor2<URI> = {
 /**
  * Lift a value to a function from any other value. Equivalent to `constant`.
  *
+ * @category 2 Typeclass Methods
  * @since 0.15.0
  */
 export const of: <A>(x: A) => <B>(y: B) => A = constant
@@ -79,6 +85,7 @@ export const of: <A>(x: A) => <B>(y: B) => A = constant
  * Fork an input across a binary and a tertiary function, applying the output
  * of the former to the latter.
  *
+ * @category 2 Typeclass Methods
  * @since 0.15.0
  */
 export const ap: <A, B>(
@@ -89,6 +96,7 @@ export const ap: <A, B>(
  * Formal `Applicative` instance for unary functions to be provided to
  * higher-kinded functions that require it.
  *
+ * @category 1 Typeclass Instances
  * @since 0.15.0
  */
 export const Applicative: Applicative2<URI> = {
@@ -102,16 +110,27 @@ export const Applicative: Applicative2<URI> = {
  * the former to the latter. As it applies to functions this is essentially
  * `ap` with some flips thrown in.
  *
+ * @category 2 Typeclass Methods
  * @since 0.15.0
  */
 export const chain: <A, B, C>(
   f: (x: B) => (y: A) => C,
+  // eslint-disable-next-line functional/prefer-tacit
 ) => (g: (x: A) => B) => (x: A) => C = f => g => x => f(g(x))(x)
+
+/**
+ * Alias of `chain`.
+ *
+ * @category 2 Typeclass Methods
+ * @since 0.17.0
+ */
+export const flatMap = chain
 
 /**
  * Formal `Monad` instance for unary functions to be provided to higher-kinded
  * functions that require it.
  *
+ * @category 1 Typeclass Instances
  * @since 0.15.0
  */
 export const Monad: Monad2<URI> = {
@@ -131,18 +150,21 @@ export const Monad: Monad2<URI> = {
  * const mapWithIndex = withIndex<number, number, number>(A.map)
  * assert.deepStrictEqual(mapWithIndex(i => x => x + i)([1, 2, 3]), [1, 3, 5])
  *
+ * @category 3 Functions
  * @since 0.5.0
  */
 export const withIndex: <A, B, C>(
   f: (g: (x: A) => B) => (ys: Array<A>) => Array<C>,
 ) => (g: (i: number) => (x: A) => B) => (ys: Array<A>) => Array<C> =
   f => g => xs => {
-    let i = 0 // eslint-disable-line functional/no-let
+    // eslint-disable-next-line functional/no-let
+    let i = 0
+    // eslint-disable-next-line functional/prefer-tacit
     return f(y => g(i++)(y))(xs)
   }
 
 /**
- * Converts a variadic function to a unary function.
+ * Converts a variadic function to a unary function. Alias of `tupled`.
  *
  * Whilst this isn't very useful for functions that ought to be curried,
  * it is helpful for functions which take an indefinite number of arguments
@@ -155,12 +177,12 @@ export const withIndex: <A, B, C>(
  *
  * assert.strictEqual(max([1, 3, 2]), 3)
  *
+ * @category 3 Functions
  * @since 0.6.0
  */
-export const unary =
-  <A extends Array<unknown>, B>(f: (...xs: A) => B) =>
-  (xs: A): B =>
-    f(...xs)
+export const unary: <A extends Array<unknown>, B>(
+  f: (...xs: A) => B,
+) => (xs: A) => B = tupled
 
 /**
  * Given an array of predicates and morphisms, returns the first morphism output
@@ -184,6 +206,7 @@ export const unary =
  * assert.strictEqual(numSize(5), '5 is small...')
  * assert.strictEqual(numSize(-3), '-3 is not a positive number.')
  *
+ * @category 3 Functions
  * @since 0.6.0
  */
 export const guard =
@@ -213,6 +236,7 @@ export const guard =
  * assert.strictEqual(normalise(-3), -2)
  * assert.strictEqual(normalise(3), 2)
  *
+ * @category 3 Functions
  * @since 0.6.0
  */
 export const ifElse =
@@ -236,6 +260,7 @@ export const ifElse =
  * assert.strictEqual(ensureEven(1), 2)
  * assert.strictEqual(ensureEven(2), 2)
  *
+ * @category 3 Functions
  * @since 0.6.0
  */
 export const unless =
@@ -258,6 +283,7 @@ export const unless =
  * assert.strictEqual(ensureOdd(1), 1)
  * assert.strictEqual(ensureOdd(2), 3)
  *
+ * @category 3 Functions
  * @since 0.6.0
  */
 export const when: <A>(
@@ -278,6 +304,7 @@ export const when: <A>(
  *
  * assert.strictEqual(doubleUntilOver100(1), 128)
  *
+ * @category 3 Functions
  * @since 0.6.0
  */
 export const until =
@@ -299,6 +326,7 @@ export const until =
  *
  * assert.deepStrictEqual(mkURL(xs), new URL(...xs))
  *
+ * @category 3 Functions
  * @since 0.7.0
  */
 export const construct =
@@ -320,6 +348,7 @@ export const construct =
  *
  * assert.strictEqual(f('hello'), '...hello')
  *
+ * @category 3 Functions
  * @since 0.12.0
  */
 export const invoke =
@@ -338,6 +367,7 @@ export const invoke =
  *
  * assert.strictEqual(f(' hello '), 'hello')
  *
+ * @category 3 Functions
  * @since 0.14.0
  */
 export const invokeNullary: <A extends string>(
@@ -357,6 +387,7 @@ export const invokeNullary: <A extends string>(
  *
  * assert.strictEqual(padStart(8)('.')(x), x.padStart(8, '.'))
  *
+ * @category 3 Functions
  * @since 0.12.0
  */
 // Type parameter D allows the end user to override what's inferred in case of
@@ -407,6 +438,7 @@ export const invokeOn =
  * assert.strictEqual(f(2), 7)
  * assert.strictEqual(runs, 1)
  *
+ * @category 3 Functions
  * @since 0.7.0
  */
 export const memoize =
@@ -416,10 +448,10 @@ export const memoize =
 
     return k => {
       const cached = M.lookup(eq)(k)(cache)
-      if (O.isSome(cached)) return cached.value // eslint-disable-line functional/no-conditional-statement
+      if (O.isSome(cached)) return cached.value // eslint-disable-line functional/no-conditional-statements
 
       const val = f(k)
-      cache.set(k, val) // eslint-disable-line functional/no-expression-statement
+      cache.set(k, val) // eslint-disable-line functional/no-expression-statements
       return val
     }
   }
@@ -435,6 +467,7 @@ export const memoize =
  *      a + b
  * assert.strictEqual(curry2T(concat2)('a')('b'), concat2(['a', 'b']))
  *
+ * @category 3 Functions
  * @since 0.7.0
  */
 export const curry2T =
@@ -454,6 +487,7 @@ export const curry2T =
  *      a + b
  * assert.strictEqual(curry2(concat2)('a')('b'), concat2('a', 'b'))
  *
+ * @category 3 Functions
  * @since 0.7.0
  */
 export const curry2: <A, B, C>(f: (a: A, b: B) => C) => (a: A) => (b: B) => C =
@@ -470,6 +504,7 @@ export const curry2: <A, B, C>(f: (a: A, b: B) => C) => (a: A) => (b: B) => C =
  *      a + b + c
  * assert.strictEqual(curry3T(concat3)('a')('b')('c'), concat3(['a', 'b', 'c']))
  *
+ * @category 3 Functions
  * @since 0.7.0
  */
 export const curry3T =
@@ -490,6 +525,7 @@ export const curry3T =
  *      a + b + c
  * assert.strictEqual(curry3(concat3)('a')('b')('c'), concat3('a', 'b', 'c'))
  *
+ * @category 3 Functions
  * @since 0.7.0
  */
 export const curry3: <A, B, C, D>(
@@ -507,6 +543,7 @@ export const curry3: <A, B, C, D>(
  *      a + b + c + d
  * assert.strictEqual(curry4T(concat4)('a')('b')('c')('d'), concat4(['a', 'b', 'c', 'd']))
  *
+ * @category 3 Functions
  * @since 0.7.0
  */
 export const curry4T =
@@ -528,6 +565,7 @@ export const curry4T =
  *      a + b + c + d
  * assert.strictEqual(curry4(concat4)('a')('b')('c')('d'), concat4('a', 'b', 'c', 'd'))
  *
+ * @category 3 Functions
  * @since 0.7.0
  */
 export const curry4: <A, B, C, D, E>(
@@ -545,6 +583,7 @@ export const curry4: <A, B, C, D, E>(
  *      a + b + c + d + e
  * assert.strictEqual(curry5T(concat5)('a')('b')('c')('d')('e'), concat5(['a', 'b', 'c', 'd', 'e']))
  *
+ * @category 3 Functions
  * @since 0.7.0
  */
 export const curry5T =
@@ -567,6 +606,7 @@ export const curry5T =
  *      a + b + c + d + e
  * assert.strictEqual(curry5(concat5)('a')('b')('c')('d')('e'), concat5('a', 'b', 'c', 'd', 'e'))
  *
+ * @category 3 Functions
  * @since 0.7.0
  */
 export const curry5: <A, B, C, D, E, F>(
@@ -584,6 +624,7 @@ export const curry5: <A, B, C, D, E, F>(
  *      a + b
  * assert.strictEqual(uncurry2(concat2)(['a', 'b']), concat2('a')('b'))
  *
+ * @category 3 Functions
  * @since 0.7.0
  */
 export const uncurry2 =
@@ -602,6 +643,7 @@ export const uncurry2 =
  *      a + b + c
  * assert.strictEqual(uncurry3(concat3)(['a', 'b', 'c']), concat3('a')('b')('c'))
  *
+ * @category 3 Functions
  * @since 0.7.0
  */
 export const uncurry3 =
@@ -620,6 +662,7 @@ export const uncurry3 =
  *      a + b + c + d
  * assert.strictEqual(uncurry4(concat4)(['a', 'b', 'c', 'd']), concat4('a')('b')('c')('d'))
  *
+ * @category 3 Functions
  * @since 0.7.0
  */
 export const uncurry4 =
@@ -638,6 +681,7 @@ export const uncurry4 =
  *      a + b + c + d + e
  * assert.strictEqual(uncurry5(concat5)(['a', 'b', 'c', 'd', 'e']), concat5('a')('b')('c')('d')('e'))
  *
+ * @category 3 Functions
  * @since 0.7.0
  */
 export const uncurry5 =
@@ -660,6 +704,7 @@ export const uncurry5 =
  *
  * assert.deepStrictEqual(fork([add1, S.fromNumber, add2])(0), [1, '0', 2])
  *
+ * @category 3 Functions
  * @since 0.11.0
  */
 // Don't use a type alias for any of this as it worsens the docs output
@@ -750,6 +795,7 @@ export function fork<A, B, C, D, E, F, G, H, I, J>(
  *
  * assert.deepStrictEqual(f('hello'), 'hello! hello ?hello')
  *
+ * @category 3 Functions
  * @since 0.12.0
  */
 // The tuple [B, ...C] allows the compiler to infer A in gs without the need
@@ -774,12 +820,13 @@ export const converge =
  * assert.strictEqual(isStringInstance('ciao'), false)
  * assert.strictEqual(isStringInstance(new String('ciao')), true)
  *
+ * @category 3 Functions
  * @since 0.12.0
  */
 export const isInstanceOf =
   <A>(x: {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    new (...args: Array<any>): unknown
+    new (...args: Array<any>): A
   }): Refinement<unknown, A> =>
   (y: unknown): y is A =>
     y instanceof x
@@ -798,6 +845,7 @@ export const isInstanceOf =
  * assert.deepStrictEqual(g(1), 6)
  * assert.deepStrictEqual(g(3), 12)
  *
+ * @category 3 Functions
  * @since 0.12.0
  */
 export const applyEvery: <A>(fs: Array<Endomorphism<A>>) => Endomorphism<A> =
@@ -820,6 +868,7 @@ export const applyEvery: <A>(fs: Array<Endomorphism<A>>) => Endomorphism<A> =
  * assert.deepStrictEqual(g(1), 6)
  * assert.deepStrictEqual(g(3), 12)
  *
+ * @category 3 Functions
  * @since 0.13.0
  */
 export const applySomes =
@@ -829,3 +878,23 @@ export const applySomes =
       fs,
       A.reduce(x, (y, mf) => pipe(mf, O.match(constant(y), apply(y)))),
     )
+
+/**
+ * Apply a function the specified number of times. `n` will be normalised to a
+ * non-negative integer according to the semantics of `A.replicate`.
+ *
+ * @example
+ * import { applyN } from 'fp-ts-std/Function'
+ * import { increment } from 'fp-ts-std/Number'
+ *
+ * const add3 = applyN(3)(increment)
+ *
+ * assert.strictEqual(add3(2), 5)
+ *
+ * @category 3 Functions
+ * @since 0.17.0
+ */
+export const applyN =
+  (n: number) =>
+  <A>(f: Endomorphism<A>): Endomorphism<A> =>
+    pipe(A.replicate(n, f), applyEvery)

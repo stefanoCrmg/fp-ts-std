@@ -29,6 +29,7 @@ import {
   isInstanceOf,
   applyEvery,
   applySomes,
+  applyN,
 } from "../src/Function"
 import { fromNumber } from "../src/String"
 import { Option } from "fp-ts/Option"
@@ -360,7 +361,7 @@ describe("Function", () => {
   describe("construct", () => {
     const f = construct
 
-    // eslint-disable-next-line functional/no-class
+    // eslint-disable-next-line functional/no-classes
     class X {
       // eslint-disable-next-line @typescript-eslint/no-empty-function
       constructor(public x: number, public y: string) {}
@@ -379,7 +380,7 @@ describe("Function", () => {
     const f = invoke
 
     it("calls the method with arguments on the object", () => {
-      // eslint-disable-next-line functional/no-class
+      // eslint-disable-next-line functional/no-classes
       class X {
         static f(x: string) {
           return x + x
@@ -395,7 +396,7 @@ describe("Function", () => {
     const f = invokeNullary
 
     it("calls the method", () => {
-      // eslint-disable-next-line functional/no-class
+      // eslint-disable-next-line functional/no-classes
       class X {
         static f() {
           return 42
@@ -436,7 +437,7 @@ describe("Function", () => {
     it("does not call function more than once per input", () => {
       let runs = 0 // eslint-disable-line functional/no-let
       const g = f(N.Eq)<number>(n => {
-        runs++ // eslint-disable-line functional/no-expression-statement
+        runs++ // eslint-disable-line functional/no-expression-statements
         return add(5)(n)
       })
 
@@ -643,7 +644,7 @@ describe("Function", () => {
 
   describe("isInstanceOf", () => {
     it("is equivalent to instanceof operator", () => {
-      // eslint-disable-next-line functional/no-class
+      // eslint-disable-next-line functional/no-classes
       class X {}
       const x = new X()
 
@@ -691,6 +692,23 @@ describe("Function", () => {
       ]
       expect(f(fs)(1)).not.toBe(4)
       expect(f(fs)(1)).toBe(6)
+    })
+  })
+
+  describe("applyN", () => {
+    const f: Endomorphism<number> = n => applyN(n)(increment)(2)
+
+    it("applies the function the specified number of times", () => {
+      expect(f(3)).toBe(5)
+
+      fc.assert(
+        fc.property(fc.integer({ min: 1, max: 50 }), n => f(n) === n + 2),
+      )
+    })
+
+    it("returns identity on non-positive number", () => {
+      expect(f(0)).toBe(2)
+      expect(f(-1)).toBe(2)
     })
   })
 })

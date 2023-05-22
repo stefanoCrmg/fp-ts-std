@@ -1,6 +1,6 @@
 ---
 title: URLSearchParams.ts
-nav_order: 45
+nav_order: 46
 parent: Modules
 ---
 
@@ -15,7 +15,7 @@ Added in v0.2.0
 
 <h2 class="text-delta">Table of contents</h2>
 
-- [utils](#utils)
+- [3 Functions](#3-functions)
   - [clone](#clone)
   - [empty](#empty)
   - [fromRecord](#fromrecord)
@@ -26,10 +26,13 @@ Added in v0.2.0
   - [isEmpty](#isempty)
   - [isURLSearchParams](#isurlsearchparams)
   - [setParam](#setparam)
+  - [toRecord](#torecord)
+  - [toString](#tostring)
+  - [toTuples](#totuples)
 
 ---
 
-# utils
+# 3 Functions
 
 ## clone
 
@@ -89,11 +92,11 @@ Parse a `URLSearchParams` from a record.
 **Signature**
 
 ```ts
-export declare const fromRecord: (x: Record<string, string>) => URLSearchParams
+export declare const fromRecord: (x: Record<string, Array<string>>) => URLSearchParams
 ```
 
 ```hs
-fromRecord :: Record string string -> URLSearchParams
+fromRecord :: Record string (Array string) -> URLSearchParams
 ```
 
 **Example**
@@ -101,9 +104,10 @@ fromRecord :: Record string string -> URLSearchParams
 ```ts
 import { fromRecord } from 'fp-ts-std/URLSearchParams'
 
-const x = { a: 'b', c: 'd' }
+const r = { a: ['b', 'c'], d: ['e'] }
+const s = 'a=b&a=c&d=e'
 
-assert.deepStrictEqual(fromRecord(x), new URLSearchParams(x))
+assert.deepStrictEqual(fromRecord(r), new URLSearchParams(s))
 ```
 
 Added in v0.2.0
@@ -279,11 +283,11 @@ Set a URL parameter in a `URLSearchParams`. This does not mutate the input.
 **Signature**
 
 ```ts
-export declare const setParam: (k: string) => (v: string) => (x: URLSearchParams) => URLSearchParams
+export declare const setParam: (k: string) => (v: string) => Endomorphism<URLSearchParams>
 ```
 
 ```hs
-setParam :: string -> string -> URLSearchParams -> URLSearchParams
+setParam :: string -> string -> Endomorphism URLSearchParams
 ```
 
 **Example**
@@ -302,3 +306,85 @@ assert.deepStrictEqual(f(y), O.some('e'))
 ```
 
 Added in v0.1.0
+
+## toRecord
+
+Convert a `URLSearchParams` to a record, grouping values by keys.
+
+**Signature**
+
+```ts
+export declare const toRecord: (x: URLSearchParams) => Record<string, NonEmptyArray<string>>
+```
+
+```hs
+toRecord :: URLSearchParams -> Record string (NonEmptyArray string)
+```
+
+**Example**
+
+```ts
+import { toRecord } from 'fp-ts-std/URLSearchParams'
+
+const x = new URLSearchParams('a=b&c=d&a=e')
+
+assert.deepStrictEqual(toRecord(x), { a: ['b', 'e'], c: ['d'] })
+```
+
+Added in v0.17.0
+
+## toString
+
+Returns a query string suitable for use in a URL, absent a question mark.
+
+**Signature**
+
+```ts
+export declare const toString: (x: URLSearchParams) => string
+```
+
+```hs
+toString :: URLSearchParams -> string
+```
+
+**Example**
+
+```ts
+import { toString } from 'fp-ts-std/URLSearchParams'
+
+const x = new URLSearchParams('a=b&c=d')
+
+assert.strictEqual(toString(x), 'a=b&c=d')
+```
+
+Added in v0.17.0
+
+## toTuples
+
+Losslessly convert a `URLSearchParams` to an array of tuples.
+
+**Signature**
+
+```ts
+export declare const toTuples: (x: URLSearchParams) => Array<[string, string]>
+```
+
+```hs
+toTuples :: URLSearchParams -> Array [string, string]
+```
+
+**Example**
+
+```ts
+import { toTuples } from 'fp-ts-std/URLSearchParams'
+
+const x = new URLSearchParams('a=b&c=d&a=e')
+
+assert.deepStrictEqual(toTuples(x), [
+  ['a', 'b'],
+  ['c', 'd'],
+  ['a', 'e'],
+])
+```
+
+Added in v0.17.0

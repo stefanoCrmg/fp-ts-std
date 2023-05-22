@@ -25,8 +25,17 @@ import {
 } from "fp-ts/Functor"
 import * as Tuple from "fp-ts/Tuple"
 import { fork } from "./Function"
-import { identity } from "fp-ts/function"
+import { flow, identity, pipe } from "fp-ts/function"
 import { mapBoth as _mapBoth } from "./Bifunctor"
+import { Eq, fromEquals } from "fp-ts/Eq"
+import { Ord, fromCompare } from "fp-ts/Ord"
+import { EQ } from "./Ordering"
+import { Bounded } from "fp-ts/Bounded"
+import { Enum } from "./Enum"
+import * as L from "./Lazy"
+import { isNonNegative, isValid, multiply } from "./Number"
+import * as O from "fp-ts/Option"
+import { allPass } from "./Predicate"
 
 /**
  * Duplicate a value into a tuple.
@@ -36,6 +45,7 @@ import { mapBoth as _mapBoth } from "./Bifunctor"
  *
  * assert.deepStrictEqual(dup('x'), ['x', 'x'])
  *
+ * @category 3 Functions
  * @since 0.12.0
  */
 export const dup: <A>(x: A) => [A, A] = fork([identity, identity])
@@ -50,6 +60,7 @@ export const dup: <A>(x: A) => [A, A] = fork([identity, identity])
  *
  * assert.deepStrictEqual(toFst(fromNumber)(5), ['5', 5])
  *
+ * @category 3 Functions
  * @since 0.12.0
  */
 export const toFst = <A, B>(f: (x: A) => B): ((x: A) => [B, A]) =>
@@ -65,6 +76,7 @@ export const toFst = <A, B>(f: (x: A) => B): ((x: A) => [B, A]) =>
  *
  * assert.deepStrictEqual(toFst(fromNumber)(5), ['5', 5])
  *
+ * @category 3 Functions
  * @since 0.12.0
  */
 export const toSnd = <A, B>(f: (x: A) => B): ((x: A) => [A, B]) =>
@@ -86,6 +98,7 @@ export const toSnd = <A, B>(f: (x: A) => B): ((x: A) => [A, B]) =>
  * assert.deepStrictEqual(traverseToFstO(fromNumberO)(5), O.some(['5', 5]))
  * assert.deepStrictEqual(traverseToFstO(constant(O.none))(5), O.none)
  *
+ * @category 2 Typeclass Methods
  * @since 0.12.0
  */
 export function traverseToFst<F extends URIS4>(
@@ -132,6 +145,7 @@ export function traverseToFst<F>(
  * assert.deepStrictEqual(traverseToSndO(fromNumberO)(5), O.some([5, '5']))
  * assert.deepStrictEqual(traverseToSndO(constant(O.none))(5), O.none)
  *
+ * @category 2 Typeclass Methods
  * @since 0.12.0
  */
 export function traverseToSnd<F extends URIS4>(
@@ -172,6 +186,7 @@ export function traverseToSnd<F>(
  *
  * assert.deepStrictEqual(pipe('x', withFst('y')), ['y', 'x'])
  *
+ * @category 3 Functions
  * @since 0.12.0
  */
 export const withFst =
@@ -189,6 +204,7 @@ export const withFst =
  *
  * assert.deepStrictEqual(pipe('x', withSnd('y')), ['x', 'y'])
  *
+ * @category 3 Functions
  * @since 0.12.0
  */
 export const withSnd =
@@ -205,6 +221,7 @@ export const withSnd =
  *
  * assert.deepStrictEqual(create(['x', 'y']), ['x', 'y'])
  *
+ * @category 3 Functions
  * @since 0.12.0
  */
 export const create: <A, B>(xs: [A, B]) => [A, B] = identity
@@ -221,6 +238,7 @@ export const create: <A, B>(xs: [A, B]) => [A, B] = identity
  *
  * assert.deepStrictEqual(xs, [6, 10])
  *
+ * @category 2 Typeclass Methods
  * @since 0.14.0
  */
 export const mapBoth: <A, B>(f: (x: A) => B) => (xs: [A, A]) => [B, B] =
@@ -239,6 +257,7 @@ export const mapBoth: <A, B>(f: (x: A) => B) => (xs: [A, A]) => [B, B] =
  *
  * assert.deepStrictEqual(fanout(S.fromNumber)(add2)(0), ['0', 2])
  *
+ * @category 3 Functions
  * @since 0.15.0
  */
 // Not implemented in terms of `fp-ts/Strong` as there's no relevant typeclass
@@ -246,3 +265,124 @@ export const mapBoth: <A, B>(f: (x: A) => B) => (xs: [A, A]) => [B, B] =
 export const fanout: <A, B>(
   f: (x: A) => B,
 ) => <C>(g: (x: A) => C) => (x: A) => [B, C] = f => g => fork([f, g])
+
+/**
+ * Derive `Eq` for a tuple given `Eq` instances for its members.
+ *
+ * @example
+ * import { getEq } from 'fp-ts-std/Tuple'
+ * import * as Str from 'fp-ts/string'
+ * import * as Num from 'fp-ts/number'
+ *
+ * const Eq = getEq(Str.Eq)(Num.Eq)
+ *
+ * assert.strictEqual(Eq.equals(['foo', 123], ['foo', 123]), true)
+ * assert.strictEqual(Eq.equals(['foo', 123], ['bar', 123]), false)
+ *
+ * @category 1 Typeclass Instances
+ * @since 0.17.0
+ */
+export const getEq =
+  <A>(EA: Eq<A>) =>
+  <B>(EB: Eq<B>): Eq<[A, B]> =>
+    fromEquals(([xa, xb], [ya, yb]) => EA.equals(xa, ya) && EB.equals(xb, yb))
+
+/**
+ * Derive `Ord` for a tuple given `Ord` instances for its members. The first
+ * component is compared first.
+ *
+ * @example
+ * import { getOrd } from 'fp-ts-std/Tuple'
+ * import * as Str from 'fp-ts/string'
+ * import * as Num from 'fp-ts/number'
+ * import { LT, EQ, GT } from 'fp-ts-std/Ordering'
+ *
+ * const Ord = getOrd(Str.Ord)(Num.Ord)
+ *
+ * assert.strictEqual(Ord.compare(['foo', 123], ['foo', 123]), EQ)
+ * assert.strictEqual(Ord.compare(['foo', 123], ['bar', 123]), GT)
+ *
+ * @category 1 Typeclass Instances
+ * @since 0.17.0
+ */
+export const getOrd =
+  <A>(OA: Ord<A>) =>
+  <B>(OB: Ord<B>): Ord<[A, B]> =>
+    fromCompare(([xa, xb], [ya, yb]) => {
+      const a = OA.compare(xa, ya)
+      return a === EQ ? OB.compare(xb, yb) : a
+    })
+
+/**
+ * Derive a `Bounded` instance for a tuple in which the top and bottom
+ * bounds are `[A.top, B.top]` and `[A.bottom, B.bottom]` respectively.
+ *
+ * @category 1 Typeclass Instances
+ * @since 0.17.0
+ */
+export const getBounded =
+  <A>(BA: Bounded<A>) =>
+  <B>(BB: Bounded<B>): Bounded<[A, B]> => ({
+    ...getOrd(BA)(BB),
+    top: [BA.top, BB.top],
+    bottom: [BA.bottom, BB.bottom],
+  })
+
+/**
+ * Derive an `Enum` instance for a tuple given an `Enum` instance for each
+ * member.
+ *
+ * @example
+ * import { universe } from 'fp-ts-std/Enum'
+ * import { Enum as EnumBool } from 'fp-ts-std/Boolean'
+ * import { getEnum } from 'fp-ts-std/Tuple'
+ *
+ * const E = getEnum(EnumBool)(EnumBool)
+ *
+ * assert.deepStrictEqual(
+ *   universe(E),
+ *   [[false, false], [true, false], [false, true], [true, true]],
+ * )
+ *
+ * @category 1 Typeclass Instances
+ * @since 0.17.0
+ */
+export const getEnum =
+  <A>(EA: Enum<A>) =>
+  <B>(EB: Enum<B>): Enum<[A, B]> => ({
+    ...getBounded(EA)(EB),
+    succ: ([a, b]) =>
+      EA.equals(a, EA.top)
+        ? pipe(EB.succ(b), O.map(withFst(EA.bottom)))
+        : pipe(EA.succ(a), O.map(withSnd(b))),
+    pred: ([a, b]) =>
+      EA.equals(a, EA.bottom)
+        ? pipe(EB.pred(b), O.map(withFst(EA.top)))
+        : pipe(EA.pred(a), O.map(withSnd(b))),
+    toEnum: flow(
+      O.fromPredicate(allPass([isValid, isNonNegative, Number.isInteger])),
+      O.chain(n => {
+        const ac = L.execute(EA.cardinality)
+        const bc = L.execute(EB.cardinality)
+        if (n > ac + bc) return O.none // eslint-disable-line functional/no-conditional-statements
+
+        type AB = (x: A) => (y: B) => [A, B]
+        return pipe(
+          O.of<AB>(withFst),
+          O.ap(EA.toEnum(n % ac)),
+          O.ap(EB.toEnum(Math.floor(n / ac))),
+        )
+      }),
+    ),
+    fromEnum: ([a, b]) => {
+      const ai = EA.fromEnum(a)
+      const bi = EB.fromEnum(b)
+      const ac = L.execute(EA.cardinality)
+      return (ac - 1) * bi + ai + bi
+    },
+    cardinality: pipe(
+      L.of(multiply),
+      L.ap(EA.cardinality),
+      L.ap(EB.cardinality),
+    ),
+  })
