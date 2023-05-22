@@ -19,6 +19,11 @@
     "node": ">=18"
   },
   "exports": {
+    ".": {
+      "types": "./dist/types/index.d.ts",
+      "require": "./dist/cjs/index.js",
+      "import": "./dist/esm/index.js"
+    },
     "./*": {
       "types": "./dist/types/*.d.ts",
       "require": "./dist/cjs/*.js",
